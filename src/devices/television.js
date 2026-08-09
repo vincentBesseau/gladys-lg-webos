@@ -184,24 +184,47 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
   const cleanups = [];
 
   cleanups.push(
+    await client.subscribe(WEBOS_COMMANDS.GET_POWER_STATE, async (payload) => {
+      logger.info(`LG webOS real power state: ${JSON.stringify(payload)}`);
+
+      const state = String(payload.state || '').toLowerCase();
+
+      const isOn = state === 'active' || state === 'screen off';
+
+      await gladys.publishState(
+        byType.get(FEATURE_KEYS.POWER).external_id,
+
+        isOn ? 1 : 0,
+      );
+    }),
+  );
+
+  cleanups.push(
     await client.subscribe(WEBOS_COMMANDS.GET_VOLUME, async (payload) => {
-      logger.info(`LG webOS power state: ${JSON.stringify(payload)}`);
       const states = [];
+
       if (payload.volume !== undefined) {
         states.push({
           device_feature_external_id: byType.get('volume').external_id,
+
           state: Number(payload.volume),
         });
       }
+
       if (payload.muted !== undefined) {
         states.push({
           device_feature_external_id: byType.get('volume-mute').external_id,
+
           state: payload.muted ? 1 : 0,
         });
       }
-      if (states.length) await gladys.publishStates(states);
+
+      if (states.length) {
+        await gladys.publishStates(states);
+      }
     }),
   );
+
   return () => cleanups.forEach((cleanup) => cleanup?.());
 }
 

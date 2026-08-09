@@ -100,8 +100,6 @@ async function connectTv() {
   await nextClient.connect();
   client = nextClient;
 
-  await publishPowerState(gladys, config, 1);
-
   stopSubscriptions = await startTelevisionSubscriptions(gladys, client, config);
   await gladys.setConnectionStatus(true);
   logger.info(`LG webOS connected through ${client.connectedUrl}`);

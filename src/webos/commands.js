@@ -12,4 +12,5 @@ export const WEBOS_COMMANDS = Object.freeze({
   TURN_OFF: 'ssap://system/turnOff',
   CREATE_TOAST: 'ssap://system.notifications/createToast',
   FOREGROUND_APP: 'ssap://com.webos.applicationManager/getForegroundAppInfo',
+  GET_POWER_STATE: 'ssap://com.webos.service.tvpower/power/getPowerState',
 });
