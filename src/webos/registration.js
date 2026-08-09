@@ -38,6 +38,7 @@ export function buildRegistrationPayload(clientKey) {
         'READ_CURRENT_CHANNEL',
         'READ_INPUT_DEVICE_LIST',
         'READ_RUNNING_APPS',
+        'READ_INSTALLED_APPS',
         'READ_TV_CHANNEL_LIST',
         'WRITE_NOTIFICATION_TOAST',
         'READ_POWER_STATE',

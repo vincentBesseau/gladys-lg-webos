@@ -14,6 +14,22 @@ export const FEATURE_KEYS = Object.freeze({
   CHANNEL_UP: 'channel-up',
   CHANNEL_DOWN: 'channel-down',
   TOAST: 'toast',
+  SOURCE: 'source',
+  CURRENT_APP: 'current-app',
+  LAUNCH_APP: 'launch-app',
+  INPUT_STATUS: 'input-status',
+});
+
+const textFeature = (ids, key, name, { readOnly = true, feedback = true } = {}) => ({
+  name,
+  external_id: ids.feature(key),
+  category: 'text',
+  type: 'text',
+  min: 0,
+  max: 0,
+  read_only: readOnly,
+  has_feedback: feedback,
+  keep_history: feedback,
 });
 
 const pushButton = (ids, key, name) => ({
@@ -102,6 +118,13 @@ export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
         has_feedback: false,
         keep_history: false,
       },
+      textFeature(ids, FEATURE_KEYS.SOURCE, 'Source', { readOnly: false }),
+      textFeature(ids, FEATURE_KEYS.CURRENT_APP, 'Application courante'),
+      textFeature(ids, FEATURE_KEYS.LAUNCH_APP, 'Lancer une application', {
+        readOnly: false,
+        feedback: false,
+      }),
+      textFeature(ids, FEATURE_KEYS.INPUT_STATUS, 'État de la source'),
     ],
   };
 }
@@ -172,6 +195,18 @@ export async function setTelevisionValue({ client, config, feature, value }) {
       if (!String(message ?? '').trim()) throw new Error('Toast message cannot be empty.');
       return client.request(WEBOS_COMMANDS.CREATE_TOAST, { message: String(message) });
     }
+    case FEATURE_KEYS.SOURCE: {
+      const inputId = String(value ?? '').trim();
+      if (!inputId) throw new Error('Input id cannot be empty.');
+      logger.info(`LG webOS switching input to ${inputId}`);
+      return client.request(WEBOS_COMMANDS.SWITCH_INPUT, { inputId });
+    }
+    case FEATURE_KEYS.LAUNCH_APP: {
+      const appId = String(value ?? '').trim();
+      if (!appId) throw new Error('Application id cannot be empty.');
+      logger.info(`LG webOS launching application ${appId}`);
+      return client.request(WEBOS_COMMANDS.LAUNCH_APP, { id: appId });
+    }
     default:
       throw new Error(`Unsupported LG webOS feature: ${key}`);
   }
@@ -207,6 +242,9 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
   const device = buildTelevisionDevice(gladys, config);
   if (!device) return () => {};
   const byType = new Map(device.features.map((feature) => [feature.type, feature]));
+  const byKey = new Map(
+    device.features.map((feature) => [feature.external_id.split(':').at(-1), feature]),
+  );
   const cleanups = [];
 
   let applications = [];
@@ -259,11 +297,41 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
       const application = applications.find((app) => app.id === appId);
       const input = inputs.find((candidate) => candidate.appId === appId);
 
+      const title = application?.title || input?.label || appId || 'unknown';
+
       logger.info(
-        `LG webOS foreground application: appId=${appId || 'unknown'}, title=${
-          application?.title || input?.label || 'unknown'
-        }, input=${input?.id || 'none'}, payload=${JSON.stringify(payload)}`,
+        `LG webOS foreground application: appId=${appId || 'unknown'}, title=${title}, input=${
+          input?.id || 'none'
+        }, payload=${JSON.stringify(payload)}`,
       );
+
+      const states = [];
+
+      if (appId) {
+        states.push({
+          device_feature_external_id: byKey.get(FEATURE_KEYS.CURRENT_APP).external_id,
+          state: title,
+        });
+      }
+
+      if (input) {
+        states.push(
+          {
+            device_feature_external_id: byKey.get(FEATURE_KEYS.SOURCE).external_id,
+            state: input.id,
+          },
+          {
+            device_feature_external_id: byKey.get(FEATURE_KEYS.INPUT_STATUS).external_id,
+            state: `${input.label} (${input.id}) — ${
+              input.connected ? 'connected' : 'disconnected'
+            }`,
+          },
+        );
+      }
+
+      if (states.length) {
+        await gladys.publishStates(states);
+      }
     }),
   );
 
