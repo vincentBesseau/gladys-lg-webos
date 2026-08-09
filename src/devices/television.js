@@ -310,7 +310,7 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
       if (appId) {
         states.push({
           device_feature_external_id: byKey.get(FEATURE_KEYS.CURRENT_APP).external_id,
-          state: title,
+          text: title,
         });
       }
 
@@ -318,11 +318,11 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
         states.push(
           {
             device_feature_external_id: byKey.get(FEATURE_KEYS.SOURCE).external_id,
-            state: input.id,
+            text: input.id,
           },
           {
             device_feature_external_id: byKey.get(FEATURE_KEYS.INPUT_STATUS).external_id,
-            state: `${input.label} (${input.id}) — ${
+            text: `${input.label} (${input.id}) — ${
               input.connected ? 'connected' : 'disconnected'
             }`,
           },
