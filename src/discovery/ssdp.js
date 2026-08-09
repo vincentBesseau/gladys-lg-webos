@@ -1,13 +1,28 @@
 export const WEBOS_SSDP_ST = 'urn:lge-com:service:webos-second-screen:1';
 
 function getHeader(entry, name) {
-  const sources = [entry?.headers, entry].filter((value) => value && typeof value === 'object');
   const wanted = name.toLowerCase();
+
+  if (typeof entry?.headers === 'string') {
+    for (const line of entry.headers.split(/\r?\n/)) {
+      const separatorIndex = line.indexOf(':');
+      if (separatorIndex === -1) continue;
+
+      const key = line.slice(0, separatorIndex).trim().toLowerCase();
+      if (key !== wanted) continue;
+
+      return line.slice(separatorIndex + 1).trim();
+    }
+  }
+
+  const sources = [entry?.headers, entry].filter((value) => value && typeof value === 'object');
+
   for (const source of sources) {
     for (const [key, value] of Object.entries(source)) {
       if (key.toLowerCase() === wanted) return value;
     }
   }
+
   return undefined;
 }
 
