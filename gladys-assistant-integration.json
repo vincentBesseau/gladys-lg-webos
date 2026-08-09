@@ -62,8 +62,14 @@
       "required": false,
       "options": [
         { "value": "auto", "label": { "en": "Automatic", "fr": "Automatique" } },
-        { "value": "ws", "label": { "en": "WebSocket (port 3000)", "fr": "WebSocket (port 3000)" } },
-        { "value": "wss", "label": { "en": "Secure WebSocket (port 3001)", "fr": "WebSocket sécurisé (port 3001)" } }
+        {
+          "value": "ws",
+          "label": { "en": "WebSocket (port 3000)", "fr": "WebSocket (port 3000)" }
+        },
+        {
+          "value": "wss",
+          "label": { "en": "Secure WebSocket (port 3001)", "fr": "WebSocket sécurisé (port 3001)" }
+        }
       ]
     }
   ],

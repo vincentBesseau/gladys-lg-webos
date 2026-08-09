@@ -59,7 +59,10 @@ export async function fetchDeviceDescription(location, fetchImpl = fetch) {
   }
 }
 
-export async function discoverWebOsTelevisions(gladys, { timeoutSeconds = 5, fetchImpl = fetch } = {}) {
+export async function discoverWebOsTelevisions(
+  gladys,
+  { timeoutSeconds = 5, fetchImpl = fetch } = {},
+) {
   const responses = await gladys.scanNetwork('ssdp', {
     st: WEBOS_SSDP_ST,
     timeoutSeconds,
@@ -77,7 +80,12 @@ export async function discoverWebOsTelevisions(gladys, { timeoutSeconds = 5, fet
     const udn = details.udn || normalizeUdn(usn);
     if (!ip || !udn) continue;
 
-    if (details.manufacturer && !/\blg\b/i.test(details.manufacturer) && !/webos/i.test(details.manufacturer)) continue;
+    if (
+      details.manufacturer &&
+      !/\blg\b/i.test(details.manufacturer) &&
+      !/webos/i.test(details.manufacturer)
+    )
+      continue;
 
     const name = details.friendlyName || details.modelName || `LG webOS TV (${ip})`;
     televisions.set(udn, {

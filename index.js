@@ -25,7 +25,9 @@ async function scanTelevisions() {
   const televisions = await discoverWebOsTelevisions(gladys);
   logger.info(`LG webOS discovery found ${televisions.length} TV(s).`);
 
-  const devices = televisions.map((television) => buildDiscoveredTelevisionDevice(gladys, television, config));
+  const devices = televisions.map((television) =>
+    buildDiscoveredTelevisionDevice(gladys, television, config),
+  );
   await gladys.publishDiscoveredDevices(devices);
 
   if (config.tv_udn) {
@@ -166,7 +168,7 @@ gladys.onConfigUpdated(async (newConfig) => {
     logger.warn('Unable to connect to LG webOS after configuration update', error);
     await gladys.setConnectionStatus(false, {
       en: 'Unable to connect to the TV. Check its IP and network settings.',
-      fr: "Impossible de se connecter à la TV. Vérifiez son IP et ses réglages réseau.",
+      fr: 'Impossible de se connecter à la TV. Vérifiez son IP et ses réglages réseau.',
     });
   }
 });

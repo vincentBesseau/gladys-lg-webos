@@ -9,7 +9,10 @@ const DEFAULTS = Object.freeze({
 });
 
 export function normalizeMac(value = '') {
-  const compact = String(value).trim().toUpperCase().replace(/[^0-9A-F]/g, '');
+  const compact = String(value)
+    .trim()
+    .toUpperCase()
+    .replace(/[^0-9A-F]/g, '');
   if (!compact) return '';
   if (compact.length !== 12) return String(value).trim().toUpperCase();
   return compact.match(/.{2}/g).join(':');
@@ -21,8 +24,12 @@ export function normalizeConfig(input = {}) {
     tv_ip: String(config.tv_ip ?? '').trim(),
     tv_mac: normalizeMac(config.tv_mac),
     tv_name: String(config.tv_name || DEFAULTS.tv_name).trim(),
-    tv_udn: String(config.tv_udn ?? '').trim().toLowerCase(),
-    tv_platform_id: String(config.tv_platform_id ?? '').trim().toLowerCase(),
+    tv_udn: String(config.tv_udn ?? '')
+      .trim()
+      .toLowerCase(),
+    tv_platform_id: String(config.tv_platform_id ?? '')
+      .trim()
+      .toLowerCase(),
     connection_mode: ['auto', 'ws', 'wss'].includes(config.connection_mode)
       ? config.connection_mode
       : DEFAULTS.connection_mode,
@@ -31,7 +38,8 @@ export function normalizeConfig(input = {}) {
 }
 
 export function validateConfig(config) {
-  if (!config.tv_ip) throw new Error('TV IP address is required. Run a network scan or configure it manually.');
+  if (!config.tv_ip)
+    throw new Error('TV IP address is required. Run a network scan or configure it manually.');
   if (!/^([0-9]{1,3}\.){3}[0-9]{1,3}$/.test(config.tv_ip)) {
     throw new Error('TV IP address is invalid.');
   }

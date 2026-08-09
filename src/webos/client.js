@@ -4,7 +4,13 @@ import { buildRegistrationPayload } from './registration.js';
 const OPEN = 1;
 
 export class WebOsClient extends EventEmitter {
-  constructor({ ip, clientKey = '', mode = 'auto', timeout = 15000, WebSocketImpl = globalThis.WebSocket }) {
+  constructor({
+    ip,
+    clientKey = '',
+    mode = 'auto',
+    timeout = 15000,
+    WebSocketImpl = globalThis.WebSocket,
+  }) {
     super();
     if (!WebSocketImpl) throw new Error('A WebSocket implementation is required (Node.js 22+).');
     this.ip = ip;
@@ -121,7 +127,13 @@ export class WebOsClient extends EventEmitter {
             }
           },
         });
-        socket.send(JSON.stringify({ id, type: 'register', payload: buildRegistrationPayload(this.clientKey) }));
+        socket.send(
+          JSON.stringify({
+            id,
+            type: 'register',
+            payload: buildRegistrationPayload(this.clientKey),
+          }),
+        );
       });
 
       socket.addEventListener('message', (event) => this.#handleMessage(event.data));
@@ -160,7 +172,9 @@ export class WebOsClient extends EventEmitter {
       if (!pending.subscription) {
         clearTimeout(pending.timer);
         this.pending.delete(message.id);
-        pending.reject(new Error(message.error || message.payload?.errorText || 'LG webOS request failed.'));
+        pending.reject(
+          new Error(message.error || message.payload?.errorText || 'LG webOS request failed.'),
+        );
       } else {
         pending.callback?.(message.payload, message);
       }

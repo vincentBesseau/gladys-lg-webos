@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDiscoveredTelevisionDevice, buildTelevisionDevice, paramsToObject } from '../src/devices/television.js';
+import {
+  buildDiscoveredTelevisionDevice,
+  buildTelevisionDevice,
+  paramsToObject,
+} from '../src/devices/television.js';
 
 const gladys = {
   externalIds: (type, id) => ({

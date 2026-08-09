@@ -28,7 +28,10 @@ const pushButton = (ids, key, name) => ({
 });
 
 function stablePlatformId(value) {
-  return String(value).toLowerCase().replace(/^uuid:/, '').replace(/[^a-z0-9_-]/g, '');
+  return String(value)
+    .toLowerCase()
+    .replace(/^uuid:/, '')
+    .replace(/[^a-z0-9_-]/g, '');
 }
 
 export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
@@ -132,7 +135,9 @@ export async function setTelevisionValue({ client, config, feature, value }) {
     case FEATURE_KEYS.POWER:
       if (Number(value) === 1) {
         if (!config.tv_mac) {
-          throw new Error('Wake-on-LAN requires the TV MAC address. Add it in the integration configuration.');
+          throw new Error(
+            'Wake-on-LAN requires the TV MAC address. Add it in the integration configuration.',
+          );
         }
         return wakeOnLan(config.tv_mac);
       }
@@ -176,10 +181,16 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
     await client.subscribe(WEBOS_COMMANDS.GET_VOLUME, async (payload) => {
       const states = [];
       if (payload.volume !== undefined) {
-        states.push({ device_feature_external_id: byType.get('volume').external_id, state: Number(payload.volume) });
+        states.push({
+          device_feature_external_id: byType.get('volume').external_id,
+          state: Number(payload.volume),
+        });
       }
       if (payload.muted !== undefined) {
-        states.push({ device_feature_external_id: byType.get('volume-mute').external_id, state: payload.muted ? 1 : 0 });
+        states.push({
+          device_feature_external_id: byType.get('volume-mute').external_id,
+          state: payload.muted ? 1 : 0,
+        });
       }
       if (states.length) await gladys.publishStates(states);
     }),

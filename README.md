@@ -22,19 +22,19 @@ LG webOS WebSocket API. No cloud account is required.
 
 Each television exposes these features:
 
-| Feature | Category / type |
-|----------|-----------------|
-| Power | `television` / `binary` |
-| Volume | `television` / `volume` |
-| Mute | `television` / `volume-mute` |
-| Play | `television` / `play` |
-| Pause | `television` / `pause` |
-| Stop | `television` / `stop` |
-| Channel + | `television` / `button` |
-| Channel - | `television` / `button` |
-| Volume + | `television` / `button` |
-| Volume - | `television` / `button` |
-| TV notification | `text` / `text` |
+| Feature         | Category / type              |
+| --------------- | ---------------------------- |
+| Power           | `television` / `binary`      |
+| Volume          | `television` / `volume`      |
+| Mute            | `television` / `volume-mute` |
+| Play            | `television` / `play`        |
+| Pause           | `television` / `pause`       |
+| Stop            | `television` / `stop`        |
+| Channel +       | `television` / `button`      |
+| Channel -       | `television` / `button`      |
+| Volume +        | `television` / `button`      |
+| Volume -        | `television` / `button`      |
+| TV notification | `text` / `text`              |
 
 The integration also supports **Wake-on-LAN** to power on compatible TVs.
 

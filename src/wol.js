@@ -5,7 +5,10 @@ export function buildMagicPacket(mac) {
   if (bytes.length !== 6 || bytes.some((value) => Number.isNaN(value))) {
     throw new Error('Invalid MAC address.');
   }
-  return Buffer.concat([Buffer.alloc(6, 0xff), ...Array.from({ length: 16 }, () => Buffer.from(bytes))]);
+  return Buffer.concat([
+    Buffer.alloc(6, 0xff),
+    ...Array.from({ length: 16 }, () => Buffer.from(bytes)),
+  ]);
 }
 
 export async function wakeOnLan(mac, broadcastAddress = '255.255.255.255', port = 9) {

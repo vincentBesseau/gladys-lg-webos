@@ -25,5 +25,7 @@ test('normalizes discovery configuration', () => {
 test('MAC is optional but IP is required to connect', () => {
   assert.doesNotThrow(() => validateConfig(normalizeConfig({ tv_ip: '192.168.1.20' })));
   assert.throws(() => validateConfig(normalizeConfig({ tv_ip: '' })));
-  assert.throws(() => validateConfig(normalizeConfig({ tv_ip: '192.168.1.20', tv_mac: 'bad-mac' })));
+  assert.throws(() =>
+    validateConfig(normalizeConfig({ tv_ip: '192.168.1.20', tv_mac: 'bad-mac' })),
+  );
 });

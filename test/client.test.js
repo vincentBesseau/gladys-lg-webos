@@ -26,9 +26,25 @@ class FakeWebSocket {
     this.sent.push(raw);
     const message = JSON.parse(raw);
     if (message.type === 'register') {
-      queueMicrotask(() => this.emit('message', { data: JSON.stringify({ id: message.id, type: 'registered', payload: { 'client-key': 'abc' } }) }));
+      queueMicrotask(() =>
+        this.emit('message', {
+          data: JSON.stringify({
+            id: message.id,
+            type: 'registered',
+            payload: { 'client-key': 'abc' },
+          }),
+        }),
+      );
     } else if (message.type === 'request') {
-      queueMicrotask(() => this.emit('message', { data: JSON.stringify({ id: message.id, type: 'response', payload: { returnValue: true } }) }));
+      queueMicrotask(() =>
+        this.emit('message', {
+          data: JSON.stringify({
+            id: message.id,
+            type: 'response',
+            payload: { returnValue: true },
+          }),
+        }),
+      );
     }
   }
   close() {

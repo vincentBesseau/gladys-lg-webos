@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { discoverWebOsTelevisions, fetchDeviceDescription, WEBOS_SSDP_ST } from '../src/discovery/ssdp.js';
+import {
+  discoverWebOsTelevisions,
+  fetchDeviceDescription,
+  WEBOS_SSDP_ST,
+} from '../src/discovery/ssdp.js';
 
 const xml = `<?xml version="1.0"?>
 <root><device>
@@ -81,7 +85,8 @@ test('ignores a non-LG description even if it replies to the scan', async () => 
   const televisions = await discoverWebOsTelevisions(gladys, {
     fetchImpl: async () => ({
       ok: true,
-      text: async () => '<root><device><manufacturer>Other Vendor</manufacturer><UDN>uuid:not-lg</UDN></device></root>',
+      text: async () =>
+        '<root><device><manufacturer>Other Vendor</manufacturer><UDN>uuid:not-lg</UDN></device></root>',
     }),
   });
   assert.deepEqual(televisions, []);
