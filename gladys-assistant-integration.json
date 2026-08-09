@@ -21,7 +21,10 @@
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "LG webOS TV", "fr": "TV LG webOS" },
+      "label": {
+        "en": "LG webOS TV",
+        "fr": "TV LG webOS"
+      },
       "description": {
         "en": "Start with the Discover tab. Gladys performs the SSDP scan from the host network, then the integration connects locally to the selected TV. Manual IP/MAC fields below are available as a fallback and for Wake-on-LAN.",
         "fr": "Commencez par l'onglet Découvrir. Gladys effectue le scan SSDP depuis le réseau hôte, puis l'intégration se connecte localement à la TV sélectionnée. Les champs IP/MAC ci-dessous restent disponibles en secours et pour le Wake-on-LAN."
@@ -29,8 +32,11 @@
     },
     {
       "key": "tv_ip",
-      "type": "text",
-      "label": { "en": "TV IP address", "fr": "Adresse IP de la TV" },
+      "type": "string",
+      "label": {
+        "en": "TV IP address",
+        "fr": "Adresse IP de la TV"
+      },
       "description": {
         "en": "Optional when using network discovery.",
         "fr": "Facultative si vous utilisez la découverte réseau."
@@ -39,8 +45,11 @@
     },
     {
       "key": "tv_mac",
-      "type": "text",
-      "label": { "en": "TV MAC address", "fr": "Adresse MAC de la TV" },
+      "type": "string",
+      "label": {
+        "en": "TV MAC address",
+        "fr": "Adresse MAC de la TV"
+      },
       "description": {
         "en": "Optional for discovery and control, but required to turn the TV on with Wake-on-LAN.",
         "fr": "Facultative pour la découverte et le contrôle, mais nécessaire pour allumer la TV avec Wake-on-LAN."
@@ -49,26 +58,43 @@
     },
     {
       "key": "tv_name",
-      "type": "text",
-      "label": { "en": "TV name", "fr": "Nom de la TV" },
-      "default": "LG webOS TV",
+      "type": "string",
+      "label": {
+        "en": "TV name",
+        "fr": "Nom de la TV"
+      },
       "required": false
     },
     {
       "key": "connection_mode",
       "type": "select",
-      "label": { "en": "Connection mode", "fr": "Mode de connexion" },
+      "label": {
+        "en": "Connection mode",
+        "fr": "Mode de connexion"
+      },
       "default": "auto",
       "required": false,
       "options": [
-        { "value": "auto", "label": { "en": "Automatic", "fr": "Automatique" } },
+        {
+          "value": "auto",
+          "label": {
+            "en": "Automatic",
+            "fr": "Automatique"
+          }
+        },
         {
           "value": "ws",
-          "label": { "en": "WebSocket (port 3000)", "fr": "WebSocket (port 3000)" }
+          "label": {
+            "en": "WebSocket (port 3000)",
+            "fr": "WebSocket (port 3000)"
+          }
         },
         {
           "value": "wss",
-          "label": { "en": "Secure WebSocket (port 3001)", "fr": "WebSocket sécurisé (port 3001)" }
+          "label": {
+            "en": "Secure WebSocket (port 3001)",
+            "fr": "WebSocket sécurisé (port 3001)"
+          }
         }
       ]
     }
@@ -76,18 +102,27 @@
   "actions": [
     {
       "key": "test_connection",
-      "label": { "en": "Test TV connection", "fr": "Tester la connexion à la TV" },
+      "label": {
+        "en": "Test TV connection",
+        "fr": "Tester la connexion à la TV"
+      },
       "timeout_seconds": 30
     },
     {
       "key": "test_toast",
-      "label": { "en": "Send a test notification", "fr": "Envoyer une notification de test" },
+      "label": {
+        "en": "Send a test notification",
+        "fr": "Envoyer une notification de test"
+      },
       "timeout_seconds": 30,
       "fields": [
         {
           "key": "message",
-          "type": "text",
-          "label": { "en": "Message", "fr": "Message" },
+          "type": "string",
+          "label": {
+            "en": "Message",
+            "fr": "Message"
+          },
           "required": false
         }
       ]
