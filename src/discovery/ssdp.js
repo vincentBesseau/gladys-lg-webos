@@ -1,3 +1,5 @@
+import { logger } from '@gladysassistant/integration-sdk';
+
 export const WEBOS_SSDP_ST = 'urn:lge-com:service:webos-second-screen:1';
 
 function getHeader(entry, name) {
@@ -82,7 +84,7 @@ export async function discoverWebOsTelevisions(
     st: WEBOS_SSDP_ST,
     timeoutSeconds,
   });
-  console.log('LG WEBOS SSDP RAW:', JSON.stringify(responses, null, 2));
+  logger.debug('LG WEBOS SSDP RAW:', JSON.stringify(responses, null, 2));
   const televisions = new Map();
   for (const entry of responses || []) {
     const location = String(getHeader(entry, 'location') || '').trim();

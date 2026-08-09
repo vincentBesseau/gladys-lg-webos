@@ -95,6 +95,8 @@ export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
         external_id: ids.feature(FEATURE_KEYS.TOAST),
         category: 'text',
         type: 'text',
+        min: 0,
+        max: 0,
         read_only: false,
         has_feedback: false,
         keep_history: false,
