@@ -178,7 +178,6 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
   const byType = new Map(device.features.map((feature) => [feature.type, feature]));
   const cleanups = [];
 
-  await gladys.publishState(byType.get('binary').external_id, 1);
   cleanups.push(
     await client.subscribe(WEBOS_COMMANDS.GET_VOLUME, async (payload) => {
       const states = [];
@@ -198,4 +197,15 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
     }),
   );
   return () => cleanups.forEach((cleanup) => cleanup?.());
+}
+
+export async function publishPowerState(gladys, config, value) {
+  const device = buildTelevisionDevice(gladys, config);
+  if (!device) return;
+
+  const powerFeature = device.features.find((feature) => feature.type === FEATURE_KEYS.POWER);
+
+  if (!powerFeature) return;
+
+  await gladys.publishState(powerFeature.external_id, value ? 1 : 0);
 }

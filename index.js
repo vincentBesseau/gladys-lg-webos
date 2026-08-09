@@ -4,6 +4,7 @@ import {
   buildDiscoveredTelevisionDevice,
   buildTelevisionDevice,
   paramsToObject,
+  publishPowerState,
   setTelevisionValue,
   startTelevisionSubscriptions,
 } from './src/devices/television.js';
@@ -41,6 +42,8 @@ async function scanTelevisions() {
 }
 
 async function disconnectTv() {
+  await publishPowerState(gladys, config, 0).catch(() => {});
+
   stopSubscriptions();
   stopSubscriptions = () => {};
   client?.close();
@@ -77,6 +80,9 @@ async function connectTv() {
   });
   nextClient.on('error', (error) => logger.warn('LG webOS protocol error', error));
   nextClient.on('close', () => {
+    publishPowerState(gladys, config, 0).catch((error) =>
+      logger.warn('Unable to publish Power OFF state', error),
+    );
     gladys
       .setConnectionStatus(false, {
         en: 'The TV is offline or unreachable.',
@@ -86,6 +92,9 @@ async function connectTv() {
   });
   await nextClient.connect();
   client = nextClient;
+
+  await publishPowerState(gladys, config, 1);
+
   stopSubscriptions = await startTelevisionSubscriptions(gladys, client, config);
   await gladys.setConnectionStatus(true);
   logger.info(`LG webOS connected through ${client.connectedUrl}`);
