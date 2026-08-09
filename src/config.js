@@ -1,42 +1,36 @@
-// -----------------------------------------------------------------------------
-// Integration configuration.
-//
-// The configuration is filled in by the user in Gladys, from the `config_schema`
-// declared in `gladys-assistant-integration.json`. The SDK fetches it for you
-// (`gladys.getConfig()`) and notifies you of every change through
-// `gladys.onConfigUpdated()`.
-//
-// This module only provides defaults and normalizes the received object, so the
-// rest of the code never has to deal with `undefined`.
-// -----------------------------------------------------------------------------
+const DEFAULTS = Object.freeze({
+  tv_ip: '',
+  tv_mac: '',
+  tv_name: 'LG webOS TV',
+  connection_mode: 'auto',
+  client_key: '',
+});
 
-// Defaults: they MUST stay consistent with the `default` values declared in the
-// `config_schema` of the manifest.
-export const DEFAULT_CONFIG = {
-  latitude: 48.8566, // Paris
-  longitude: 2.3522,
-  unit: 'celsius', // 'celsius' | 'fahrenheit'
-  poll_frequency: 300, // seconds, how often sensors are refreshed
-  // Reserved key (NOT in config_schema): because the manifest declares both
-  // 'local' and 'cloud' in its `transports` field, Gladys shows a standard
-  // "Prefer the local connection" toggle and sends the user's choice here.
-  // Read-only for the integration; defaults to true.
-  GLADYS_PREFER_LOCAL: true,
-};
+export function normalizeMac(value = '') {
+  const compact = String(value).trim().toUpperCase().replace(/[^0-9A-F]/g, '');
+  if (compact.length !== 12) return String(value).trim().toUpperCase();
+  return compact.match(/.{2}/g).join(':');
+}
 
-/**
- * Merge the user config with the defaults.
- * @param {Record<string, unknown>} raw config returned by the SDK
- */
-export function normalizeConfig(raw = {}) {
+export function normalizeConfig(input = {}) {
+  const config = { ...DEFAULTS, ...input };
   return {
-    ...DEFAULT_CONFIG,
-    ...raw,
-    // Force the types: config may arrive as strings from a form.
-    latitude: Number(raw.latitude ?? DEFAULT_CONFIG.latitude),
-    longitude: Number(raw.longitude ?? DEFAULT_CONFIG.longitude),
-    poll_frequency: Number(raw.poll_frequency ?? DEFAULT_CONFIG.poll_frequency),
-    // The preference is a boolean; anything but an explicit false means true.
-    GLADYS_PREFER_LOCAL: raw.GLADYS_PREFER_LOCAL !== false,
+    tv_ip: String(config.tv_ip ?? '').trim(),
+    tv_mac: normalizeMac(config.tv_mac),
+    tv_name: String(config.tv_name || DEFAULTS.tv_name).trim(),
+    connection_mode: ['auto', 'ws', 'wss'].includes(config.connection_mode)
+      ? config.connection_mode
+      : DEFAULTS.connection_mode,
+    client_key: String(config.client_key ?? '').trim(),
   };
+}
+
+export function validateConfig(config) {
+  if (!config.tv_ip) throw new Error('TV IP address is required.');
+  if (!/^([0-9]{1,3}\.){3}[0-9]{1,3}$/.test(config.tv_ip)) {
+    throw new Error('TV IP address is invalid.');
+  }
+  if (!/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(config.tv_mac)) {
+    throw new Error('TV MAC address is invalid.');
+  }
 }

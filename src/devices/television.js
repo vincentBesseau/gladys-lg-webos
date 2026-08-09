@@ -1,0 +1,151 @@
+import { WEBOS_COMMANDS } from '../webos/commands.js';
+import { wakeOnLan } from '../wol.js';
+
+export const FEATURE_KEYS = Object.freeze({
+  POWER: 'binary',
+  VOLUME: 'volume',
+  MUTE: 'volume-mute',
+  VOLUME_UP: 'volume-up',
+  VOLUME_DOWN: 'volume-down',
+  PLAY: 'play',
+  PAUSE: 'pause',
+  STOP: 'stop',
+  CHANNEL_UP: 'channel-up',
+  CHANNEL_DOWN: 'channel-down',
+  TOAST: 'toast',
+});
+
+const pushButton = (ids, key, name) => ({
+  name,
+  external_id: ids.feature(key),
+  category: 'television',
+  type: key,
+  min: 0,
+  max: 1,
+  read_only: false,
+  has_feedback: false,
+  keep_history: false,
+});
+
+export function buildTelevisionDevice(gladys, config) {
+  if (!config.tv_mac) return null;
+  const stableId = config.tv_mac.replaceAll(':', '').toLowerCase();
+  const ids = gladys.externalIds('lg-webos', stableId);
+  return {
+    name: config.tv_name,
+    external_id: ids.device,
+    params: [
+      { name: 'ip', value: config.tv_ip },
+      { name: 'mac', value: config.tv_mac },
+    ],
+    features: [
+      {
+        name: 'Power',
+        external_id: ids.feature(FEATURE_KEYS.POWER),
+        category: 'television',
+        type: 'binary',
+        min: 0,
+        max: 1,
+        read_only: false,
+        has_feedback: true,
+        keep_history: true,
+      },
+      {
+        name: 'Volume',
+        external_id: ids.feature(FEATURE_KEYS.VOLUME),
+        category: 'television',
+        type: 'volume',
+        min: 0,
+        max: 100,
+        read_only: false,
+        has_feedback: true,
+        keep_history: true,
+      },
+      {
+        name: 'Mute',
+        external_id: ids.feature(FEATURE_KEYS.MUTE),
+        category: 'television',
+        type: 'volume-mute',
+        min: 0,
+        max: 1,
+        read_only: false,
+        has_feedback: true,
+        keep_history: true,
+      },
+      pushButton(ids, FEATURE_KEYS.VOLUME_UP, 'Volume +'),
+      pushButton(ids, FEATURE_KEYS.VOLUME_DOWN, 'Volume -'),
+      pushButton(ids, FEATURE_KEYS.PLAY, 'Play'),
+      pushButton(ids, FEATURE_KEYS.PAUSE, 'Pause'),
+      pushButton(ids, FEATURE_KEYS.STOP, 'Stop'),
+      pushButton(ids, FEATURE_KEYS.CHANNEL_UP, 'Channel +'),
+      pushButton(ids, FEATURE_KEYS.CHANNEL_DOWN, 'Channel -'),
+      {
+        name: 'Message TV',
+        external_id: ids.feature(FEATURE_KEYS.TOAST),
+        category: 'text',
+        type: 'text',
+        read_only: false,
+        has_feedback: false,
+        keep_history: false,
+      },
+    ],
+  };
+}
+
+export async function setTelevisionValue({ client, config, feature, value }) {
+  const key = feature.external_id.split(':').at(-1);
+  switch (key) {
+    case FEATURE_KEYS.POWER:
+      if (Number(value) === 1) return wakeOnLan(config.tv_mac);
+      return client.request(WEBOS_COMMANDS.TURN_OFF);
+    case FEATURE_KEYS.VOLUME:
+      return client.request(WEBOS_COMMANDS.SET_VOLUME, { volume: Math.round(Number(value)) });
+    case FEATURE_KEYS.MUTE:
+      return client.request(WEBOS_COMMANDS.SET_MUTE, { mute: Boolean(Number(value)) });
+    case FEATURE_KEYS.VOLUME_UP:
+      return client.request(WEBOS_COMMANDS.VOLUME_UP);
+    case FEATURE_KEYS.VOLUME_DOWN:
+      return client.request(WEBOS_COMMANDS.VOLUME_DOWN);
+    case FEATURE_KEYS.PLAY:
+      return client.request(WEBOS_COMMANDS.PLAY);
+    case FEATURE_KEYS.PAUSE:
+      return client.request(WEBOS_COMMANDS.PAUSE);
+    case FEATURE_KEYS.STOP:
+      return client.request(WEBOS_COMMANDS.STOP);
+    case FEATURE_KEYS.CHANNEL_UP:
+      return client.request(WEBOS_COMMANDS.CHANNEL_UP);
+    case FEATURE_KEYS.CHANNEL_DOWN:
+      return client.request(WEBOS_COMMANDS.CHANNEL_DOWN);
+    case FEATURE_KEYS.TOAST: {
+      const message = typeof value === 'object' && value?.text !== undefined ? value.text : value;
+      if (!String(message ?? '').trim()) throw new Error('Toast message cannot be empty.');
+      return client.request(WEBOS_COMMANDS.CREATE_TOAST, { message: String(message) });
+    }
+    default:
+      throw new Error(`Unsupported LG webOS feature: ${key}`);
+  }
+}
+
+export async function startTelevisionSubscriptions(gladys, client, config) {
+  const device = buildTelevisionDevice(gladys, config);
+  if (!device) return () => {};
+  const byType = new Map(device.features.map((feature) => [feature.type, feature]));
+  const cleanups = [];
+
+  await gladys.publishState(byType.get('binary').external_id, 1);
+
+  cleanups.push(
+    await client.subscribe(WEBOS_COMMANDS.GET_VOLUME, async (payload) => {
+      const states = [];
+      if (payload.volume !== undefined) {
+        states.push({ device_feature_external_id: byType.get('volume').external_id, state: Number(payload.volume) });
+      }
+      if (payload.muted !== undefined) {
+        states.push({ device_feature_external_id: byType.get('volume-mute').external_id, state: payload.muted ? 1 : 0 });
+      }
+      if (states.length) await gladys.publishStates(states);
+    }),
+  );
+
+  return () => cleanups.forEach((cleanup) => cleanup?.());
+}

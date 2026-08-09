@@ -1,0 +1,15 @@
+export const WEBOS_COMMANDS = Object.freeze({
+  GET_VOLUME: 'ssap://audio/getVolume',
+  SET_VOLUME: 'ssap://audio/setVolume',
+  SET_MUTE: 'ssap://audio/setMute',
+  PLAY: 'ssap://media.controls/play',
+  PAUSE: 'ssap://media.controls/pause',
+  STOP: 'ssap://media.controls/stop',
+  VOLUME_UP: 'ssap://audio/volumeUp',
+  VOLUME_DOWN: 'ssap://audio/volumeDown',
+  CHANNEL_UP: 'ssap://tv/channelUp',
+  CHANNEL_DOWN: 'ssap://tv/channelDown',
+  TURN_OFF: 'ssap://system/turnOff',
+  CREATE_TOAST: 'ssap://system.notifications/createToast',
+  FOREGROUND_APP: 'ssap://com.webos.applicationManager/getForegroundAppInfo',
+});

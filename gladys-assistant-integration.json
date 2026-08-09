@@ -1,99 +1,78 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "LG webOS",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Control an LG webOS television locally from Gladys Assistant.",
+    "fr": "Contrôlez localement une télévision LG webOS depuis Gladys Assistant."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
-  "gladys_version": ">=4.85.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "transports": ["local", "cloud"],
+  "docker_image": "ghcr.io/vincentbesseau/gladys-lg-webos:1.0.0",
+  "gladys_version": ">=4.84.3",
+  "cover_image": "https://raw.githubusercontent.com/vincentBesseau/gladys-lg-webos/main/cover.png",
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": { "en": "LG webOS TV", "fr": "TV LG webOS" },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
-      },
-      "links": [
-        {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
-        }
-      ]
+        "en": "The TV must be reachable on the same local network. On first connection, accept the pairing prompt displayed on the TV.",
+        "fr": "La TV doit être joignable sur le même réseau local. Lors de la première connexion, acceptez la demande d'association affichée sur la TV."
+      }
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
-      },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "key": "tv_ip",
+      "type": "text",
+      "label": { "en": "TV IP address", "fr": "Adresse IP de la TV" },
+      "required": true
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
+      "key": "tv_mac",
+      "type": "text",
+      "label": { "en": "TV MAC address", "fr": "Adresse MAC de la TV" },
       "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+        "en": "Used as the stable device identifier and for Wake-on-LAN.",
+        "fr": "Utilisée comme identifiant stable de l'appareil et pour le Wake-on-LAN."
       },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "required": true
     },
     {
-      "key": "unit",
+      "key": "tv_name",
+      "type": "text",
+      "label": { "en": "TV name", "fr": "Nom de la TV" },
+      "default": "LG webOS TV",
+      "required": false
+    },
+    {
+      "key": "connection_mode",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "label": { "en": "Connection mode", "fr": "Mode de connexion" },
+      "default": "auto",
       "required": false,
-      "default": "celsius",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        { "value": "auto", "label": { "en": "Automatic", "fr": "Automatique" } },
+        { "value": "ws", "label": { "en": "WebSocket (port 3000)", "fr": "WebSocket (port 3000)" } },
+        { "value": "wss", "label": { "en": "Secure WebSocket (port 3001)", "fr": "WebSocket sécurisé (port 3001)" } }
       ]
-    },
-    {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
-      "description": {
-        "en": "How often sensors are polled, in seconds.",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes."
-      },
-      "required": false,
-      "default": 300,
-      "min": 30,
-      "max": 3600
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
+      "key": "test_connection",
+      "label": { "en": "Test TV connection", "fr": "Tester la connexion à la TV" },
       "timeout_seconds": 30
     },
     {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
+      "key": "test_toast",
+      "label": { "en": "Send a test notification", "fr": "Envoyer une notification de test" },
+      "timeout_seconds": 30,
       "fields": [
         {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "key": "message",
+          "type": "text",
+          "label": { "en": "Message", "fr": "Message" },
+          "required": false
         }
       ]
     }

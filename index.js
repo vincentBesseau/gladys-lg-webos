@@ -1,186 +1,137 @@
-// -----------------------------------------------------------------------------
-// Entry point of the Gladys external integration.
-//
-// Role of this file: wire the SDK to the device catalog (src/devices/). It holds
-// NO hardware logic: all the control "work" lives in the device modules. This
-// file only:
-//   1. instantiates the SDK (connection, auth, reconnection: handled for you);
-//   2. registers the event handlers BEFORE connect();
-//   3. connects and publishes the discovered devices.
-//
-// Environment variables provided by the Gladys supervisor to the container:
-//   - GLADYS_HOST_API_URL         (host API URL)
-//   - GLADYS_INTEGRATION_TOKEN    (integration-scoped JWT)
-//   - GLADYS_INTEGRATION_SELECTOR (integration identifier)
-// The SDK reads them automatically: `new GladysIntegration()` is enough.
-// -----------------------------------------------------------------------------
-
 import { GladysIntegration, logger } from '@gladysassistant/integration-sdk';
-import { normalizeConfig } from './src/config.js';
-import {
-  DEVICE_BLUEPRINTS,
-  buildDiscoveredDevices,
-  buildTransportEntries,
-  findBlueprintByDevice,
-  identifyDevice,
-} from './src/devices/index.js';
+import { normalizeConfig, validateConfig } from './src/config.js';
+import { buildTelevisionDevice, setTelevisionValue, startTelevisionSubscriptions } from './src/devices/television.js';
+import { WebOsClient } from './src/webos/client.js';
+import { WEBOS_COMMANDS } from './src/webos/commands.js';
 
 const gladys = new GladysIntegration();
-
-// Current configuration (hot-reloaded via onConfigUpdated).
 let config = normalizeConfig();
+let client = null;
+let stopSubscriptions = () => {};
 
-// Cleanup functions for the "push" subscriptions (e.g. the motion sensor).
-let pushCleanups = [];
+async function publishDevice() {
+  const device = buildTelevisionDevice(gladys, config);
+  await gladys.publishDiscoveredDevices(device ? [device] : []);
+}
 
-// --- Discovery: Gladys asks for the list of devices --------------------------
-gladys.onScanRequest(async () => {
-  logger.info('onScanRequest -> publishing discovered devices');
-  await gladys.publishDiscoveredDevices(buildDiscoveredDevices(gladys, config));
-});
+async function disconnectTv() {
+  stopSubscriptions();
+  stopSubscriptions = () => {};
+  client?.close();
+  client = null;
+}
 
-// --- Command: the user acts on a controllable feature ------------------------
+async function connectTv() {
+  await disconnectTv();
+  validateConfig(config);
+
+  // Newer LG firmwares can require wss://:3001 with a self-signed certificate.
+  // This integration only talks to the configured local TV, so allow that local certificate.
+  if (config.connection_mode !== 'ws') process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+  const nextClient = new WebOsClient({
+    ip: config.tv_ip,
+    clientKey: config.client_key,
+    mode: config.connection_mode,
+  });
+
+  nextClient.on('pairing', () => {
+    logger.info('LG webOS pairing requested: accept the authorization prompt on the TV.');
+    gladys.setConnectionStatus(false, {
+      en: 'Accept the pairing request displayed on the TV.',
+      fr: "Acceptez la demande d'association affichée sur la TV.",
+    }).catch(() => {});
+  });
+
+  nextClient.on('registered', async (clientKey) => {
+    if (clientKey && clientKey !== config.client_key) {
+      config = { ...config, client_key: clientKey };
+      await gladys.setConfig({ client_key: clientKey });
+    }
+  });
+
+  nextClient.on('error', (error) => logger.warn('LG webOS protocol error', error));
+  nextClient.on('close', () => {
+    gladys.setConnectionStatus(false, {
+      en: 'The TV is offline or unreachable.',
+      fr: 'La TV est éteinte ou injoignable.',
+    }).catch(() => {});
+  });
+
+  await nextClient.connect();
+  client = nextClient;
+  stopSubscriptions = await startTelevisionSubscriptions(gladys, client, config);
+  await gladys.setConnectionStatus(true);
+  logger.info(`LG webOS connected through ${client.connectedUrl}`);
+}
+
+gladys.onScanRequest(publishDevice);
+
 gladys.onSetValue(async (device, feature, value) => {
-  logger.info(`onSetValue <- ${feature.external_id} = ${value}`);
-  const blueprint = findBlueprintByDevice(gladys, device);
-  if (!blueprint || typeof blueprint.onSetValue !== 'function') {
-    // Throw: the SDK sends a success:false acknowledgement to Gladys.
-    throw new Error(`No command handler for ${device.external_id}`);
+  if (!client && feature.external_id.endsWith(':binary') && Number(value) === 1) {
+    return setTelevisionValue({ client: null, config, feature, value });
   }
-  await blueprint.onSetValue(gladys, { device, feature, value, config });
+  if (!client) throw new Error('LG webOS TV is not connected.');
+  await setTelevisionValue({ client, config, feature, value });
 });
 
-// --- Camera: Gladys needs a FRESH image of a camera device -------------------
-// Triggered by the dashboard live view or a chat intent. The resolved
-// `image/jpg;base64,...` string (≤ 150 KB) is acked back to Gladys; the ack is
-// awaited under 15 s (not the usual 5 s), so a real capture fits.
-gladys.onGetImage(async (device) => {
-  logger.info(`onGetImage <- ${device.external_id}`);
-  const blueprint = findBlueprintByDevice(gladys, device);
-  if (!blueprint || typeof blueprint.onGetImage !== 'function') {
-    throw new Error(`No camera handler for ${device.external_id}`);
-  }
-  return blueprint.onGetImage(gladys, { device, config });
+gladys.onAction('test_connection', async () => {
+  await connectTv();
+  return {
+    en: `Connected to ${config.tv_name}.`,
+    fr: `Connexion à ${config.tv_name} réussie.`,
+  };
 });
 
-// --- Polling: Gladys asks to refresh a device --------------------------------
-gladys.onPoll(async (device) => {
-  const blueprint = findBlueprintByDevice(gladys, device);
-  if (!blueprint || typeof blueprint.onPoll !== 'function') {
-    logger.debug(`onPoll ignored (no polling) for ${device.external_id}`);
+gladys.onAction('test_toast', async (fields) => {
+  if (!client) await connectTv();
+  await client.request(WEBOS_COMMANDS.CREATE_TOAST, {
+    message: fields.message || 'Hello from Gladys Assistant!',
+  });
+  return { en: 'Toast sent to the TV.', fr: 'Notification envoyée sur la TV.' };
+});
+
+gladys.onConfigUpdated(async (newConfig) => {
+  config = normalizeConfig(newConfig);
+  await publishDevice();
+  try {
+    await connectTv();
+  } catch (error) {
+    logger.warn('Unable to connect to LG webOS after configuration update', error);
+    await gladys.setConnectionStatus(false, {
+      en: 'Unable to connect to the TV. Check its IP and network settings.',
+      fr: "Impossible de se connecter à la TV. Vérifiez son IP et ses réglages réseau.",
+    });
+  }
+});
+
+gladys.on('connected', async () => {
+  config = normalizeConfig(await gladys.getConfig());
+  await publishDevice();
+  if (!config.tv_ip || !config.tv_mac) {
+    await gladys.setConnectionStatus(false, {
+      en: 'Configure the TV IP and MAC address first.',
+      fr: "Configurez d'abord l'adresse IP et l'adresse MAC de la TV.",
+    });
     return;
   }
-  await blueprint.onPoll(gladys, config);
-});
-
-// --- Manifest actions: buttons in the Configuration screen -------------------
-// Each action declared in the `actions` field of the manifest is registered
-// per key; the message resolved by the handler is displayed under the button
-// (the ack is awaited under the action's `timeout_seconds`, not the usual 5 s).
-for (const blueprint of DEVICE_BLUEPRINTS) {
-  for (const [actionKey, handler] of Object.entries(blueprint.actions ?? {})) {
-    gladys.onAction(actionKey, (fields) => handler(gladys, { fields, config }));
-  }
-}
-
-// The `identify` action targets ONE device chosen by the user, so it is not
-// owned by a single blueprint. Its manifest field declares
-// `"source": "devices"` (SDK v0.7+): instead of static `options`, the
-// Configuration screen fills the select with the integration's own created
-// devices, and the handler receives the chosen external_id as a field value.
-gladys.onAction('identify', (fields) => {
-  logger.info(`Action identify <- ${fields.device}`);
-  return identifyDevice(gladys, fields.device, config);
-});
-
-// --- Configuration updated by the user ---------------------------------------
-gladys.onConfigUpdated(async (newConfig) => {
-  logger.info('onConfigUpdated -> new configuration received');
-  config = normalizeConfig(newConfig);
-  // Re-publish the devices: some properties (unit, frequency) depend on it.
-  // publishDiscoveredDevices is idempotent (upsert by external_id).
-  await gladys.publishDiscoveredDevices(buildDiscoveredDevices(gladys, config));
-  // The reserved GLADYS_PREFER_LOCAL key arrives here like any other key:
-  // re-route the dual-channel devices, then reflect the ACTUAL outcome.
-  await publishDeviceTransports();
-});
-
-// --- Connection lifecycle ----------------------------------------------------
-// The SDK itself logs the WebSocket lifecycle (connections, disconnections,
-// reconnection attempts) under the `gladys-sdk` name: no need to log it again
-// here, these handlers only run the integration's own (re)initialization.
-gladys.on('connected', async () => {
   try {
-    // 1) Fetch the config filled in by the user.
-    config = normalizeConfig(await gladys.getConfig());
-
-    // 2) (Re)publish all devices as soon as we are connected.
-    await gladys.publishDiscoveredDevices(buildDiscoveredDevices(gladys, config));
-
-    // 3) Publish the per-device transport badge (cloud/local, dual-channel
-    // devices only). Lightweight channel: on a live switch, call it again
-    // without re-publishing the devices.
-    await publishDeviceTransports();
-
-    // 4) Start the real-time subscriptions ("push" sensors, camera snapshots).
-    stopPushSubscriptions();
-    pushCleanups = DEVICE_BLUEPRINTS.filter((bp) => typeof bp.startPush === 'function').map((bp) =>
-      bp.startPush(gladys, config),
-    );
-
-    // 5) Report the application-level status, shown in the Configuration
-    // screen. Distinct from the container state machine: an integration can
-    // be RUNNING and still disconnected from its third-party service.
-    await gladys.setConnectionStatus(true);
-  } catch (err) {
-    logger.error('Post-connection initialization failed', err);
-    await gladys
-      .setConnectionStatus(false, {
-        en: 'Initialization failed, check the integration logs.',
-        fr: "L'initialisation a échoué, consultez les logs de l'intégration.",
-      })
-      .catch(() => {});
+    await connectTv();
+  } catch (error) {
+    logger.warn('LG webOS TV is currently unreachable', error);
+    await gladys.setConnectionStatus(false, {
+      en: 'TV unreachable. Turn it on to pair or connect.',
+      fr: "TV injoignable. Allumez-la pour l'associer ou vous connecter.",
+    });
   }
 });
 
-gladys.on('disconnected', () => {
-  stopPushSubscriptions();
+gladys.handleShutdown(async () => {
+  await disconnectTv();
 });
 
-// Publish the effective transport of every dual-channel device
-// ('local' | 'cloud' | 'unreachable'), rendered as a badge in the Gladys UI.
-// An entry can also flag a degraded state (`{ degraded: true, message }`,
-// SDK v0.7+): the badge keeps its transport color plus an orange dot, and the
-// tooltip shows the reason — see src/devices/plug.js.
-async function publishDeviceTransports() {
-  const entries = buildTransportEntries(gladys, config);
-  if (entries.length > 0) {
-    await gladys.publishTransports(entries);
-  }
-}
-
-function stopPushSubscriptions() {
-  for (const cleanup of pushCleanups) {
-    try {
-      cleanup?.();
-    } catch (err) {
-      logger.error('Push subscription cleanup failed', err);
-    }
-  }
-  pushCleanups = [];
-}
-
-// --- Graceful shutdown -------------------------------------------------------
-// The SDK stops the push subscriptions, disconnects cleanly and exits with
-// code 0 when the supervisor stops the container (SIGTERM/SIGINT).
-gladys.handleShutdown((signal) => {
-  logger.info(`Received ${signal} -> graceful shutdown`);
-  stopPushSubscriptions();
-});
-
-// --- Startup -----------------------------------------------------------------
-logger.info('Starting the template integration...');
-gladys.connect().catch((err) => {
-  logger.error('Initial connection failed', err);
+logger.info('Starting LG webOS integration...');
+gladys.connect().catch((error) => {
+  logger.error('Initial connection to Gladys failed', error);
   process.exit(1);
 });
