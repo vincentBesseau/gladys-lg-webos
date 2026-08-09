@@ -177,11 +177,65 @@ export async function setTelevisionValue({ client, config, feature, value }) {
   }
 }
 
+
+export async function getInstalledApplications(client) {
+  const payload = await client.request(WEBOS_COMMANDS.LIST_APPS);
+  return (payload.apps || [])
+    .filter((app) => app?.id)
+    .map((app) => ({
+      id: String(app.id),
+      title: String(app.title || app.id),
+      type: String(app.type || ''),
+      visible: app.visible !== false,
+    }));
+}
+
+export async function getExternalInputs(client) {
+  const payload = await client.request(WEBOS_COMMANDS.GET_EXTERNAL_INPUT_LIST);
+  return (payload.devices || [])
+    .filter((input) => input?.id)
+    .map((input) => ({
+      id: String(input.id),
+      appId: String(input.appId || ''),
+      label: String(input.label || input.id),
+      icon: String(input.icon || ''),
+      connected: input.connected !== false,
+    }));
+}
+
 export async function startTelevisionSubscriptions(gladys, client, config) {
   const device = buildTelevisionDevice(gladys, config);
   if (!device) return () => {};
   const byType = new Map(device.features.map((feature) => [feature.type, feature]));
   const cleanups = [];
+
+  let applications = [];
+  let inputs = [];
+
+  try {
+    applications = await getInstalledApplications(client);
+    logger.info(
+      `LG webOS installed applications: ${applications
+        .map((app) => `${app.title} (${app.id})`)
+        .join(', ')}`,
+    );
+  } catch (error) {
+    logger.warn('Unable to retrieve LG webOS installed applications', error);
+  }
+
+  try {
+    inputs = await getExternalInputs(client);
+    logger.info(
+      `LG webOS external inputs: ${inputs
+        .map(
+          (input) =>
+            `${input.label} (${input.id}${input.appId ? ` / ${input.appId}` : ''}) connected=${input.connected}`,
+        )
+        .join(', ')}`,
+    );
+  } catch (error) {
+    logger.warn('Unable to retrieve LG webOS external inputs', error);
+  }
 
   cleanups.push(
     await client.subscribe(WEBOS_COMMANDS.GET_POWER_STATE, async (payload) => {
@@ -195,6 +249,20 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
         byType.get(FEATURE_KEYS.POWER).external_id,
 
         isOn ? 1 : 0,
+      );
+    }),
+  );
+
+  cleanups.push(
+    await client.subscribe(WEBOS_COMMANDS.FOREGROUND_APP, async (payload) => {
+      const appId = String(payload.appId || payload.id || '');
+      const application = applications.find((app) => app.id === appId);
+      const input = inputs.find((candidate) => candidate.appId === appId);
+
+      logger.info(
+        `LG webOS foreground application: appId=${appId || 'unknown'}, title=${
+          application?.title || input?.label || 'unknown'
+        }, input=${input?.id || 'none'}, payload=${JSON.stringify(payload)}`,
       );
     }),
   );
