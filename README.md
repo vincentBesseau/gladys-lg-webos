@@ -1,242 +1,125 @@
-# Gladys external integration — JavaScript template
+# Gladys LG webOS integration
 
-Official starter template for building an **external integration** for
-[Gladys Assistant](https://gladysassistant.com) with the JavaScript SDK
+External integration for [Gladys Assistant](https://gladysassistant.com) that
+controls **LG webOS televisions** over the local network.
+
+Built on the JavaScript SDK
 [`@gladysassistant/integration-sdk`](https://github.com/GladysAssistant/integration-sdk-js).
 
-> Fork it, add the GitHub topic `gladys-assistant-integration`, push a
-> multi-arch image, bump the version — that's publishing. No account, no review.
+The integration communicates directly with the television using the native
+LG webOS WebSocket API. No cloud account is required.
 
-## What this template demonstrates
+---
 
-This is **not** a 40-line hello-world: it deliberately shows several **device
-types** so you can copy the one closest to your hardware. Everything lives in
-the [`src/devices/`](./src/devices) folder (one file per device type), and every
-place where you would talk to your real hardware / cloud API is marked with a
-`DO THE WORK` comment and a `logger` call.
+## What it does
 
-| Device                 | Type illustrated                                                         | SDK hooks used                              |
-| ---------------------- | ------------------------------------------------------------------------ | ------------------------------------------- |
-| Weather station        | Read-only sensors (temperature + humidity), **real data** via Open-Meteo | `onPoll`, `publishStates`, `onAction`       |
-| Living room switch     | Binary actuator (ON/OFF)                                                 | `onSetValue`, `publishState`                |
-| Living room light      | Dimmable light (on/off **+** brightness), `identify` action target       | `onSetValue` per feature, `identify`        |
-| Office plug            | Mixed: actuator **+** power metering, transport badge **+ degraded**     | `onSetValue`, `onPoll`, `publishTransports` |
-| Entrance motion sensor | Push / event-driven sensor                                               | `startPush`, `publishState`                 |
-| Entrance camera        | Camera images: periodic snapshot **+** on-demand fresh capture           | `publishCameraImage`, `onGetImage`          |
+- **Discovers LG webOS TVs** on the local network using SSDP.
+- **Pairs securely with the TV** using the native LG authorization prompt.
+- **Stores the client key** securely in the integration configuration for future reconnects.
+- **Communicates entirely locally** over the LG WebSocket protocol.
+- **Automatically reconnects** after Gladys or TV restarts.
+- **Synchronizes the TV state** with Gladys.
 
-The wiring (connection, auth, reconnection, dispatch) is in
-[`index.js`](./index.js) — you rarely need to touch it.
+Each television exposes these features:
 
-## Project structure
+| Feature | Category / type |
+|----------|-----------------|
+| Power | `television` / `binary` |
+| Volume | `television` / `volume` |
+| Mute | `television` / `volume-mute` |
+| Play | `television` / `play` |
+| Pause | `television` / `pause` |
+| Stop | `television` / `stop` |
+| Channel + | `television` / `button` |
+| Channel - | `television` / `button` |
+| Volume + | `television` / `button` |
+| Volume - | `television` / `button` |
+| TV notification | `text` / `text` |
 
-```
-.
-├─ index.js                          # SDK bootstrap + event wiring (no device logic)
-├─ src/
-│  ├─ devices/                       # ← one file per device type (edit these)
-│  │  ├─ index.js                    #   registry: list your devices here
-│  │  ├─ weatherStation.js           #   read-only sensors (poll)
-│  │  ├─ switchDevice.js             #   binary actuator
-│  │  ├─ light.js                    #   dimmable light (on/off + brightness)
-│  │  ├─ plug.js                     #   actuator + power metering + transport badge
-│  │  ├─ motionSensor.js             #   push / event-driven sensor
-│  │  └─ camera.js                   #   camera images (push + pull)
-│  ├─ weather.js                     # example real "driver" (Open-Meteo)
-│  └─ config.js                      # config defaults + normalization
-├─ docs/
-│  ├─ en.md                          # user documentation (re-hosted by Gladys,
-│  └─ fr.md                          #   linked from the Configuration screen)
-├─ gladys-assistant-integration.json # manifest (name, config schema, image…)
-├─ Dockerfile                        # Node 24 Alpine, read-only rootfs ready
-├─ .github/workflows/release.yml     # UI-driven release: bump + tag + build
-├─ .github/workflows/build.yml       # multi-arch build (git tag or called by release)
-└─ cover.png                         # catalog cover, 800×534 px, ≤150 KB
-```
+The integration also supports **Wake-on-LAN** to power on compatible TVs.
 
-To add a device type, create a new file in `src/devices/` following the same
-shape as the existing ones, then register it in `src/devices/index.js`. Business
-logic (the device modules) and utilities (`weather.js`, `config.js`) are kept
-separate so the parts you edit stay small.
+---
 
-The plumbing you would otherwise copy into every integration comes straight
-from the SDK (v0.11.0+):
+## Configuration
 
-- `logger` / `createLogger({ name })` — leveled console logger (`LOG_LEVEL`
-  env var), with named/child loggers per module. Since SDK v0.4 the SDK also
-  logs its own connection lifecycle (under the `gladys-sdk` name), so
-  connectivity problems show up in `docker logs` without extra code;
-- `DEVICE_FEATURE_CATEGORIES`, `DEVICE_FEATURE_TYPES`, `DEVICE_FEATURE_UNITS`
-  — the standard Gladys categories / types / units, no manual string copying.
-  The catalog grows with the SDK, so bumping the dependency is how you get the
-  newest ones: `battery-storage`, `doorbell` and `water-valve` categories, the
-  climate `fan-speed` / `swing-horizontal` / `swing-vertical` features and the
-  `cubic-meter-per-hour` unit (SDK v0.10), then `charging-station` and
-  `water-heater` categories plus the thermostat `mode` / `operating-state`
-  features (SDK v0.11). A recent category only renders on a Gladys that knows
-  it, so keep the manifest `gladys_version` range in sync with what you
-  publish;
-- `gladys.externalIds(type, platformId)` — builds the unique, stable device
-  and feature external ids;
-- `gladys.handleShutdown(cleanup)` — graceful SIGTERM/SIGINT handling;
-- `gladys.setConnectionStatus(connected, message?)` — application-level
-  connection status shown in the Configuration screen (the template reports it
-  after every (re)initialization);
-- `gladys.onAction(key, cb)` — handler of a manifest `actions` button: the
-  template declares a `test_weather` action (manifest `actions` field) and the
-  weather station blueprint implements it, returning the multi-language
-  message displayed under the button;
-- `gladys.publishCameraImage(externalId, image)` / `gladys.onGetImage(cb)`
-  (SDK v0.5) — the camera image channel: push a periodic snapshot and answer
-  on-demand capture requests with an `image/jpg;base64,...` string (≤ 150 KB,
-  max 12 images/minute per device). Dedicated channel: images never go through
-  the states history. See [`src/devices/camera.js`](./src/devices/camera.js);
-- `gladys.publishTransports(entries)` + `DEVICE_TRANSPORTS` (SDK v0.5) — the
-  per-device cloud/local transport badge for dual-channel devices. The
-  manifest declares `"transports": ["local", "cloud"]`, so the Configuration
-  screen shows a standard "Prefer the local connection" toggle whose value
-  arrives as the reserved, read-only config key `GLADYS_PREFER_LOCAL`
-  (boolean, default `true`). The demo plug applies the preference and reports
-  its effective transport. Since SDK v0.7 an entry can also flag a
-  **degraded** state (`{ degraded: true, message }`) — "it works, but not in
-  the nominal mode": the demo plug uses it when local is preferred but the
-  LAN session is refused, so the cloud fallback shows an orange dot with the
-  reason instead of a silently normal badge. See
-  [`src/devices/plug.js`](./src/devices/plug.js);
-- dynamic device selects (SDK v0.7) — a manifest `select` field can replace
-  its static `options` with `"source": "devices"`: the Configuration screen
-  fills it with the integration's own created devices and the handler
-  receives the chosen `external_id`. The template's `identify` action uses it
-  to make the chosen device signal itself — the answer to "act on THIS
-  device" without asking the user to copy an identifier;
-- `section` config blocks + the Documentation link (SDK v0.8) — purely
-  presentational intro blocks in the manifest `config_schema` (title,
-  plain-text description, https links) for the onboarding guidance a compact
-  form cannot carry; they store no value. For the long step-by-step, the
-  Configuration screen shows a permanent **Documentation** link to the repo's
-  [`docs/en.md`](./docs/en.md) / [`docs/fr.md`](./docs/fr.md), re-hosted by
-  Gladys.
+No manual IP configuration is required.
 
-The SDK offers more for integrations that need it — OAuth2 cloud flows
-(`onOAuthAuthorizeUrl` / `onOAuthCallback` + an `oauth2` config field),
-sub-containers (`getContainers`, `startContainer`… + the manifest `containers`
-field, whose published ports now come back as
-`{ container_port, protocol, host_port, label, name, browsable }` — SDK v0.11,
-`host_port` being the one Gladys allocated, `null` until it does, and `name`
-what makes it referenceable in a manifest section text through the
-`{{gladys_host}}` / `{{port:<name>}}` placeholders the frontend substitutes at
-render time), mediated network discovery (`scanNetwork` + the manifest
-`network_discovery` field, for UDP-broadcast / mDNS / SSDP scans from the
-core — including the active query/response variant `udp-active-broadcast`,
-SDK v0.7, where the integration forges the discovery request and the core
-broadcasts it), communication channels (manifest `type: "communication"`:
-bidirectional Telegram-like bots linked by code — SDK v0.6,
-`publishMessage` / `onSendMessage` / `linkContact` — and, since SDK v0.9,
-send-only notification channels — `messaging: { receive: false }` plus a
-manifest `contact_schema` describing the per-user credentials that
-`onSendMessage(contact, message)` receives), and incoming webhooks relayed
-by Gladys Plus (SDK v0.9: manifest `webhooks` field +
-`getWebhooks` / `onWebhook` / `onWebhookUpdated`, for cloud services that
-push their events Netatmo-style — the demo weather API only supports
-polling, so the template does not declare any), and weather providers
-(SDK v0.11: manifest `type: "weather"`, `onWeatherGet` answering with the
-pivot weather format in the unit system the user asked for, plus the optional
-`onWeatherGetImage` for a vigilance map or a rain radar and
-`requestWeatherRefresh()` to nudge the core into re-pulling instead of waiting
-for its 30-minute check — a provider feeding the dashboard widget and the chat
-assistant, not devices, so it is a different integration type than this
-template's `type: "device"`, even though the demo weather station here reads
-the same kind of API). See the
-[SDK README](https://github.com/GladysAssistant/integration-sdk-js) for those
-patterns; this template stays focused on devices.
+1. Install the integration.
+2. Open the **Discovery** page in Gladys.
+3. Start a network scan.
+4. Select your LG television.
+5. Accept the authorization request displayed on the TV.
 
-## Run it locally
+The integration stores the generated client key and reconnects automatically on
+future starts.
+
+If Wake-on-LAN is required, simply enter the TV MAC address in the integration
+configuration.
+
+---
+
+## TV notifications
+
+The integration can display native LG notifications directly on the TV.
+
+Typical examples:
+
+- Laundry finished
+- Someone is at the front door
+- Alarm activated
+- Dinner is ready
+
+Notifications appear using the standard webOS toast notification system.
+
+---
+
+## Development
 
 ```bash
 npm install
-GLADYS_HOST_API_URL="http://localhost:1443" \
-GLADYS_INTEGRATION_TOKEN="<token>" \
-GLADYS_INTEGRATION_SELECTOR="demo-devices-template" \
-LOG_LEVEL=debug \
-npm start
+npm test
+npm run lint
+npm run format
 ```
 
-The three `GLADYS_*` variables are injected by the Gladys supervisor when the
-integration runs inside its sandboxed container. The SDK reads them
-automatically.
+---
 
-## Quality checks
+## Roadmap
 
-The template ships with the tooling every integration should keep. The same
-three checks run automatically on every push and pull request (see
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
+### Current
 
-```bash
-npm run format:check   # Prettier: is everything formatted?
-npm run format         # Prettier: format everything in place
-npm run lint           # ESLint: catch real mistakes (unused vars, dead code…)
-npm test               # Unit tests, via the built-in `node --test` runner
-```
+- ✅ SSDP discovery
+- ✅ Pairing
+- ✅ Power off
+- ✅ Wake-on-LAN
+- ✅ Volume
+- ✅ Mute
+- ✅ Playback controls
+- ✅ TV notifications
 
-Tests live in [`test/`](test/) and use Node's native test runner — no extra
-test framework to install. Add a `*.test.js` file next to the ones already
-there and it is picked up automatically.
+### Planned
 
-## Validate before publishing
+- HDMI source selection
+- Installed applications
+- Application launcher
+- Current application feedback
+- Media information
+- Input status
+- Additional subscriptions from the webOS API
 
-Before you tag a release, you can check that your integration passes the store
-validation **locally**, without waiting for the hourly indexer. Run the store's
-validator against your integration directory:
+---
 
-```bash
-npx github:GladysAssistant/integration-store .
-```
+## Compatibility
 
-It runs the exact same checks as the store indexer — manifest JSON & schema,
-Docker image availability (main and sub-containers), cover image (format,
-dimensions, size) and the code rules — and reports **every** problem at once so
-you can fix them in a single pass. It exits `0` when the integration is valid,
-`1` otherwise. A few things can only be confirmed once the repository is public
-(public repo, the `gladys-assistant-integration` topic, and the manifest sitting
-at the root of the default branch), and the tool tells you which ones. See the
-[integration store](https://github.com/GladysAssistant/integration-store) for
-details.
+Tested with LG televisions running **webOS**.
 
-## Publish in 5 steps
+Older and newer versions should work as long as the native LG WebSocket API is
+available.
 
-1. **Fork** this template (or use _Use this template_ on GitHub).
-2. **Edit** the files in `src/devices/` and `gladys-assistant-integration.json` for your
-   devices, and replace `docker_image` / `cover_image` with your own.
-3. **Add the GitHub topic** `gladys-assistant-integration` to your repo.
-4. **Release from the GitHub UI**: open **Actions → Release → Run workflow**,
-   pick `patch`, `minor` or `major`. The workflow bumps the version everywhere
-   (`package.json` + manifest `version`/`docker_image`), pushes the `vX.Y.Z`
-   tag, and builds the `linux/amd64` + `linux/arm64` image to `ghcr.io`
-   (`:X.Y.Z` and `:latest`). No local tag, no manual version edit.
-5. The decentralized indexer picks up the new manifest `version` and Gladys
-   offers a one-click install / update.
+If your television is not detected, please open an issue including the model
+number and webOS version.
 
-> Prefer the terminal? `git tag v1.0.0 && git push --tags` still works — the
-> hand-pushed tag triggers the same multi-arch build. This path only publishes
-> the Docker tags, though: it does **not** touch `package.json`,
-> `package-lock.json` or the manifest. Bump `version` (and `docker_image`) in
-> `gladys-assistant-integration.json` and commit it **before** tagging, or the
-> indexer will keep serving the old version. The Release workflow above does
-> all of this for you.
-
-Full documentation: <https://gladysassistant.com> (integrations developer guide).
-
-## Notes
-
-- Requires **Node.js ≥ 20** (uses the built-in global `fetch`; no HTTP dep).
-- All external identifiers are prefixed with `ext:<selector>:` — always build
-  them with `gladys.externalIds(type, platformId)` (or the lower-level
-  `gladys.externalId(suffix)`); the server rejects anything else. Derive
-  `platformId` from the unique id the external platform gives you (serial,
-  cloud id, MAC…), never from a hard-coded label.
-- `has_feedback: true` features should publish the state **confirmed by the
-  device**; the template publishes the requested value for simplicity.
-- Replace `cover.png` with your own 800×534 px image (≤150 KB, PNG or JPEG)
-  before publishing. The bundled one is a plain gradient placeholder.
+---
 
 ## License
 
