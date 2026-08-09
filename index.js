@@ -1,6 +1,13 @@
 import { GladysIntegration, logger } from '@gladysassistant/integration-sdk';
 import { normalizeConfig, validateConfig } from './src/config.js';
-import { buildTelevisionDevice, setTelevisionValue, startTelevisionSubscriptions } from './src/devices/television.js';
+import {
+  buildDiscoveredTelevisionDevice,
+  buildTelevisionDevice,
+  paramsToObject,
+  setTelevisionValue,
+  startTelevisionSubscriptions,
+} from './src/devices/television.js';
+import { discoverWebOsTelevisions } from './src/discovery/ssdp.js';
 import { WebOsClient } from './src/webos/client.js';
 import { WEBOS_COMMANDS } from './src/webos/commands.js';
 
@@ -9,9 +16,26 @@ let config = normalizeConfig();
 let client = null;
 let stopSubscriptions = () => {};
 
-async function publishDevice() {
+async function publishConfiguredDevice() {
   const device = buildTelevisionDevice(gladys, config);
   await gladys.publishDiscoveredDevices(device ? [device] : []);
+}
+
+async function scanTelevisions() {
+  const televisions = await discoverWebOsTelevisions(gladys);
+  logger.info(`LG webOS discovery found ${televisions.length} TV(s).`);
+
+  const devices = televisions.map((television) => buildDiscoveredTelevisionDevice(gladys, television, config));
+  await gladys.publishDiscoveredDevices(devices);
+
+  if (config.tv_udn) {
+    const current = televisions.find((television) => television.udn === config.tv_udn);
+    if (current && current.ip !== config.tv_ip) {
+      config = normalizeConfig({ ...config, tv_ip: current.ip, tv_name: current.name });
+      await gladys.setConfig({ tv_ip: current.ip, tv_name: current.name });
+      logger.info(`Updated LG webOS TV IP from SSDP discovery: ${current.ip}`);
+    }
+  }
 }
 
 async function disconnectTv() {
@@ -34,30 +58,30 @@ async function connectTv() {
     clientKey: config.client_key,
     mode: config.connection_mode,
   });
-
   nextClient.on('pairing', () => {
     logger.info('LG webOS pairing requested: accept the authorization prompt on the TV.');
-    gladys.setConnectionStatus(false, {
-      en: 'Accept the pairing request displayed on the TV.',
-      fr: "Acceptez la demande d'association affichée sur la TV.",
-    }).catch(() => {});
+    gladys
+      .setConnectionStatus(false, {
+        en: 'Accept the pairing request displayed on the TV.',
+        fr: "Acceptez la demande d'association affichée sur la TV.",
+      })
+      .catch(() => {});
   });
-
   nextClient.on('registered', async (clientKey) => {
     if (clientKey && clientKey !== config.client_key) {
       config = { ...config, client_key: clientKey };
       await gladys.setConfig({ client_key: clientKey });
     }
   });
-
   nextClient.on('error', (error) => logger.warn('LG webOS protocol error', error));
   nextClient.on('close', () => {
-    gladys.setConnectionStatus(false, {
-      en: 'The TV is offline or unreachable.',
-      fr: 'La TV est éteinte ou injoignable.',
-    }).catch(() => {});
+    gladys
+      .setConnectionStatus(false, {
+        en: 'The TV is offline or unreachable.',
+        fr: 'La TV est éteinte ou injoignable.',
+      })
+      .catch(() => {});
   });
-
   await nextClient.connect();
   client = nextClient;
   stopSubscriptions = await startTelevisionSubscriptions(gladys, client, config);
@@ -65,7 +89,39 @@ async function connectTv() {
   logger.info(`LG webOS connected through ${client.connectedUrl}`);
 }
 
-gladys.onScanRequest(publishDevice);
+async function adoptDiscoveredDevice(device) {
+  const params = paramsToObject(device);
+  if (!params.ip || !params.udn) return;
+
+  config = normalizeConfig({
+    ...config,
+    tv_ip: params.ip,
+    tv_udn: params.udn,
+    tv_name: device.name || config.tv_name,
+    tv_mac: params.mac || config.tv_mac,
+    tv_platform_id: params.platform_id || config.tv_platform_id || params.udn,
+  });
+  await gladys.setConfig({
+    tv_ip: config.tv_ip,
+    tv_udn: config.tv_udn,
+    tv_name: config.tv_name,
+    tv_platform_id: config.tv_platform_id,
+    ...(config.tv_mac ? { tv_mac: config.tv_mac } : {}),
+  });
+
+  try {
+    await connectTv();
+  } catch (error) {
+    logger.warn('Discovered LG webOS TV was added but is not reachable for pairing yet', error);
+    await gladys.setConnectionStatus(false, {
+      en: 'TV added. Turn it on and accept the pairing prompt, then test the connection.',
+      fr: "TV ajoutée. Allumez-la et acceptez la demande d'association, puis testez la connexion.",
+    });
+  }
+}
+
+gladys.onScanRequest(scanTelevisions);
+gladys.onDeviceCreated(adoptDiscoveredDevice);
 
 gladys.onSetValue(async (device, feature, value) => {
   if (!client && feature.external_id.endsWith(':binary') && Number(value) === 1) {
@@ -93,7 +149,17 @@ gladys.onAction('test_toast', async (fields) => {
 
 gladys.onConfigUpdated(async (newConfig) => {
   config = normalizeConfig(newConfig);
-  await publishDevice();
+  await publishConfiguredDevice();
+
+  if (!config.tv_ip) {
+    await disconnectTv();
+    await gladys.setConnectionStatus(false, {
+      en: 'Run a network scan or configure the TV IP address.',
+      fr: "Lancez une découverte réseau ou configurez l'adresse IP de la TV.",
+    });
+    return;
+  }
+
   try {
     await connectTv();
   } catch (error) {
@@ -107,11 +173,11 @@ gladys.onConfigUpdated(async (newConfig) => {
 
 gladys.on('connected', async () => {
   config = normalizeConfig(await gladys.getConfig());
-  await publishDevice();
-  if (!config.tv_ip || !config.tv_mac) {
+  await publishConfiguredDevice();
+  if (!config.tv_ip) {
     await gladys.setConnectionStatus(false, {
-      en: 'Configure the TV IP and MAC address first.',
-      fr: "Configurez d'abord l'adresse IP et l'adresse MAC de la TV.",
+      en: 'Run a network scan to discover your LG webOS TV, or configure it manually.',
+      fr: 'Lancez une découverte réseau pour trouver votre TV LG webOS, ou configurez-la manuellement.',
     });
     return;
   }

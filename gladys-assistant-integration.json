@@ -11,31 +11,41 @@
   "gladys_version": ">=4.84.3",
   "cover_image": "https://raw.githubusercontent.com/vincentBesseau/gladys-lg-webos/main/cover.png",
   "transports": ["local"],
+  "network_discovery": [
+    {
+      "type": "ssdp",
+      "st": "urn:lge-com:service:webos-second-screen:1"
+    }
+  ],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
       "label": { "en": "LG webOS TV", "fr": "TV LG webOS" },
       "description": {
-        "en": "The TV must be reachable on the same local network. On first connection, accept the pairing prompt displayed on the TV.",
-        "fr": "La TV doit être joignable sur le même réseau local. Lors de la première connexion, acceptez la demande d'association affichée sur la TV."
+        "en": "Start with the Discover tab. Gladys performs the SSDP scan from the host network, then the integration connects locally to the selected TV. Manual IP/MAC fields below are available as a fallback and for Wake-on-LAN.",
+        "fr": "Commencez par l'onglet Découvrir. Gladys effectue le scan SSDP depuis le réseau hôte, puis l'intégration se connecte localement à la TV sélectionnée. Les champs IP/MAC ci-dessous restent disponibles en secours et pour le Wake-on-LAN."
       }
     },
     {
       "key": "tv_ip",
       "type": "text",
       "label": { "en": "TV IP address", "fr": "Adresse IP de la TV" },
-      "required": true
+      "description": {
+        "en": "Optional when using network discovery.",
+        "fr": "Facultative si vous utilisez la découverte réseau."
+      },
+      "required": false
     },
     {
       "key": "tv_mac",
       "type": "text",
       "label": { "en": "TV MAC address", "fr": "Adresse MAC de la TV" },
       "description": {
-        "en": "Used as the stable device identifier and for Wake-on-LAN.",
-        "fr": "Utilisée comme identifiant stable de l'appareil et pour le Wake-on-LAN."
+        "en": "Optional for discovery and control, but required to turn the TV on with Wake-on-LAN.",
+        "fr": "Facultative pour la découverte et le contrôle, mais nécessaire pour allumer la TV avec Wake-on-LAN."
       },
-      "required": true
+      "required": false
     },
     {
       "key": "tv_name",

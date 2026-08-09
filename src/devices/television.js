@@ -27,17 +27,25 @@ const pushButton = (ids, key, name) => ({
   keep_history: false,
 });
 
-export function buildTelevisionDevice(gladys, config) {
-  if (!config.tv_mac) return null;
-  const stableId = config.tv_mac.replaceAll(':', '').toLowerCase();
-  const ids = gladys.externalIds('lg-webos', stableId);
+function stablePlatformId(value) {
+  return String(value).toLowerCase().replace(/^uuid:/, '').replace(/[^a-z0-9_-]/g, '');
+}
+
+export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
+  const hardwareId = stableId || config.tv_platform_id || config.tv_udn || config.tv_mac;
+  if (!hardwareId) return null;
+  const ids = gladys.externalIds('lg-webos', stablePlatformId(hardwareId));
+  const params = [
+    { name: 'ip', value: config.tv_ip },
+    { name: 'mac', value: config.tv_mac },
+    { name: 'udn', value: config.tv_udn },
+    { name: 'platform_id', value: hardwareId },
+  ].filter((param) => param.value);
+
   return {
     name: config.tv_name,
     external_id: ids.device,
-    params: [
-      { name: 'ip', value: config.tv_ip },
-      { name: 'mac', value: config.tv_mac },
-    ],
+    params,
     features: [
       {
         name: 'Power',
@@ -92,11 +100,42 @@ export function buildTelevisionDevice(gladys, config) {
   };
 }
 
+export function buildDiscoveredTelevisionDevice(gladys, television, config = {}) {
+  const sameConfiguredTv = config.tv_udn === television.udn || config.tv_ip === television.ip;
+  const stableId = sameConfiguredTv
+    ? config.tv_platform_id || config.tv_mac || television.udn
+    : television.udn;
+  const device = buildTelevisionDevice(
+    gladys,
+    {
+      ...config,
+      tv_ip: television.ip,
+      tv_name: television.name,
+      tv_udn: television.udn,
+      tv_mac: sameConfiguredTv ? config.tv_mac : '',
+    },
+    { stableId },
+  );
+  if (television.model) device.model = television.model;
+  device.params.push({ name: 'location', value: television.location });
+  if (television.serial) device.params.push({ name: 'serial', value: television.serial });
+  return device;
+}
+
+export function paramsToObject(device) {
+  return Object.fromEntries((device?.params || []).map(({ name, value }) => [name, value]));
+}
+
 export async function setTelevisionValue({ client, config, feature, value }) {
   const key = feature.external_id.split(':').at(-1);
   switch (key) {
     case FEATURE_KEYS.POWER:
-      if (Number(value) === 1) return wakeOnLan(config.tv_mac);
+      if (Number(value) === 1) {
+        if (!config.tv_mac) {
+          throw new Error('Wake-on-LAN requires the TV MAC address. Add it in the integration configuration.');
+        }
+        return wakeOnLan(config.tv_mac);
+      }
       return client.request(WEBOS_COMMANDS.TURN_OFF);
     case FEATURE_KEYS.VOLUME:
       return client.request(WEBOS_COMMANDS.SET_VOLUME, { volume: Math.round(Number(value)) });
@@ -133,7 +172,6 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
   const cleanups = [];
 
   await gladys.publishState(byType.get('binary').external_id, 1);
-
   cleanups.push(
     await client.subscribe(WEBOS_COMMANDS.GET_VOLUME, async (payload) => {
       const states = [];
@@ -146,6 +184,5 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
       if (states.length) await gladys.publishStates(states);
     }),
   );
-
   return () => cleanups.forEach((cleanup) => cleanup?.());
 }
