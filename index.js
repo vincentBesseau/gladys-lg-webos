@@ -80,9 +80,16 @@ async function connectTv() {
   });
   nextClient.on('error', (error) => logger.warn('LG webOS protocol error', error));
   nextClient.on('close', () => {
+    logger.info('LG webOS connection closed: publishing Power OFF.');
+
+    if (client === nextClient) {
+      client = null;
+    }
+
     publishPowerState(gladys, config, 0).catch((error) => {
-      logger.warn('Unable to publish Power OFF state', error);
+      logger.warn('Unable to publish LG webOS Power OFF state', error);
     });
+
     gladys
       .setConnectionStatus(false, {
         en: 'The TV is offline or unreachable.',

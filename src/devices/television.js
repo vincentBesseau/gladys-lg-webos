@@ -185,6 +185,7 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
 
   cleanups.push(
     await client.subscribe(WEBOS_COMMANDS.GET_VOLUME, async (payload) => {
+      logger.info(`LG webOS power state: ${JSON.stringify(payload)}`);
       const states = [];
       if (payload.volume !== undefined) {
         states.push({
