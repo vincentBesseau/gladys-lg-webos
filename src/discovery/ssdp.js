@@ -67,7 +67,7 @@ export async function discoverWebOsTelevisions(
     st: WEBOS_SSDP_ST,
     timeoutSeconds,
   });
-
+  console.log('LG WEBOS SSDP RAW:', JSON.stringify(responses, null, 2));
   const televisions = new Map();
   for (const entry of responses || []) {
     const location = String(getHeader(entry, 'location') || '').trim();
