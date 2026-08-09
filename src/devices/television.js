@@ -1,5 +1,6 @@
 import { WEBOS_COMMANDS } from '../webos/commands.js';
 import { wakeOnLan } from '../wol.js';
+import { logger } from '@gladysassistant/integration-sdk';
 
 export const FEATURE_KEYS = Object.freeze({
   POWER: 'binary',
@@ -135,13 +136,17 @@ export async function setTelevisionValue({ client, config, feature, value }) {
   const key = feature.external_id.split(':').at(-1);
   switch (key) {
     case FEATURE_KEYS.POWER:
+      logger.info(`LG webOS Power received value=${value}`);
       if (Number(value) === 1) {
+        logger.info('LG webOS Power => ON');
         if (!config.tv_mac) {
           throw new Error(
             'Wake-on-LAN requires the TV MAC address. Add it in the integration configuration.',
           );
         }
         return wakeOnLan(config.tv_mac);
+      } else {
+        logger.info('LG webOS Power => OFF');
       }
       return client.request(WEBOS_COMMANDS.TURN_OFF);
     case FEATURE_KEYS.VOLUME:

@@ -80,9 +80,9 @@ async function connectTv() {
   });
   nextClient.on('error', (error) => logger.warn('LG webOS protocol error', error));
   nextClient.on('close', () => {
-    publishPowerState(gladys, config, 0).catch((error) =>
-      logger.warn('Unable to publish Power OFF state', error),
-    );
+    publishPowerState(gladys, config, 0).catch((error) => {
+      logger.warn('Unable to publish Power OFF state', error);
+    });
     gladys
       .setConnectionStatus(false, {
         en: 'The TV is offline or unreachable.',
@@ -135,10 +135,19 @@ gladys.onScanRequest(scanTelevisions);
 gladys.onDeviceCreated(adoptDiscoveredDevice);
 
 gladys.onSetValue(async (device, feature, value) => {
+  logger.info(
+    `LG webOS onSetValue: feature=${feature.external_id}, value=${JSON.stringify(value)}, clientConnected=${Boolean(client)}`,
+  );
+
   if (!client && feature.external_id.endsWith(':binary') && Number(value) === 1) {
+    logger.info('LG webOS Power command interpreted as ON -> Wake-on-LAN');
     return setTelevisionValue({ client: null, config, feature, value });
   }
-  if (!client) throw new Error('LG webOS TV is not connected.');
+
+  if (!client) {
+    throw new Error('LG webOS TV is not connected.');
+  }
+
   await setTelevisionValue({ client, config, feature, value });
 });
 
