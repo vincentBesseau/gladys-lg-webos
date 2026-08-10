@@ -167,7 +167,7 @@ export async function setTelevisionValue({ client, config, feature, value }) {
             'Wake-on-LAN requires the TV MAC address. Add it in the integration configuration.',
           );
         }
-        return wakeOnLan(config.tv_mac);
+        return wakeOnLan(config.tv_mac, config.tv_ip);
       } else {
         logger.info('LG webOS Power => OFF');
       }
