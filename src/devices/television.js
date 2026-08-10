@@ -107,17 +107,7 @@ export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
       pushButton(ids, FEATURE_KEYS.STOP, 'Stop'),
       pushButton(ids, FEATURE_KEYS.CHANNEL_UP, 'Channel +'),
       pushButton(ids, FEATURE_KEYS.CHANNEL_DOWN, 'Channel -'),
-      {
-        name: 'Message TV',
-        external_id: ids.feature(FEATURE_KEYS.TOAST),
-        category: 'text',
-        type: 'text',
-        min: 0,
-        max: 0,
-        read_only: false,
-        has_feedback: false,
-        keep_history: false,
-      },
+      textFeature(ids, FEATURE_KEYS.TOAST, 'Message TV', { readOnly: false }),
       textFeature(ids, FEATURE_KEYS.SOURCE, 'Source', { readOnly: false }),
       textFeature(ids, FEATURE_KEYS.CURRENT_APP, 'Application courante'),
       textFeature(ids, FEATURE_KEYS.LAUNCH_APP, 'Lancer une application', {
