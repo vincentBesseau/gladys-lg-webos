@@ -1,5 +1,4 @@
 import { WEBOS_COMMANDS } from '../webos/commands.js';
-import { wakeOnLan } from '../wol.js';
 import { logger } from '@gladysassistant/integration-sdk';
 
 export const FEATURE_KEYS = Object.freeze({
@@ -20,16 +19,22 @@ export const FEATURE_KEYS = Object.freeze({
   INPUT_STATUS: 'input-status',
 });
 
-const textFeature = (ids, key, name, { readOnly = true, feedback = true } = {}) => ({
+const textFeature = (
+  ids,
+  key,
+  name,
+  { readOnly = true, feedback = true, type = 'text', supportedOptions } = {},
+) => ({
   name,
   external_id: ids.feature(key),
   category: 'text',
-  type: 'text',
+  type,
   min: 0,
   max: 0,
   read_only: readOnly,
   has_feedback: feedback,
-  keep_history: feedback,
+  keep_history: feedback && type !== 'select',
+  ...(supportedOptions ? { supported_options: supportedOptions } : {}),
 });
 
 const pushButton = (ids, key, name) => ({
@@ -113,6 +118,8 @@ export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
       textFeature(ids, FEATURE_KEYS.LAUNCH_APP, 'Lancer une application', {
         readOnly: false,
         feedback: false,
+        type: 'select',
+        supportedOptions: [],
       }),
       textFeature(ids, FEATURE_KEYS.INPUT_STATUS, 'État de la source'),
     ],
@@ -145,7 +152,7 @@ export function paramsToObject(device) {
   return Object.fromEntries((device?.params || []).map(({ name, value }) => [name, value]));
 }
 
-export async function setTelevisionValue({ client, config, feature, value }) {
+export async function setTelevisionValue({ gladys, client, config, feature, value }) {
   const key = feature.external_id.split(':').at(-1);
   switch (key) {
     case FEATURE_KEYS.POWER:
@@ -157,7 +164,10 @@ export async function setTelevisionValue({ client, config, feature, value }) {
             'Wake-on-LAN requires the TV MAC address. Add it in the integration configuration.',
           );
         }
-        return wakeOnLan(config.tv_mac, config.tv_ip);
+        return gladys.wakeOnLan(config.tv_mac, {
+          address: '192.168.1.255',
+          port: 9,
+        });
       } else {
         logger.info('LG webOS Power => OFF');
       }
@@ -201,7 +211,6 @@ export async function setTelevisionValue({ client, config, feature, value }) {
       throw new Error(`Unsupported LG webOS feature: ${key}`);
   }
 }
-
 
 export async function getInstalledApplications(client) {
   const payload = await client.request(WEBOS_COMMANDS.LIST_APPS);
@@ -249,6 +258,23 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
     );
   } catch (error) {
     logger.warn('Unable to retrieve LG webOS installed applications', error);
+  }
+
+  if (applications.length) {
+    const launchAppFeature = device.features.find(
+      (feature) => feature.external_id.split(':').at(-1) === FEATURE_KEYS.LAUNCH_APP,
+    );
+
+    if (launchAppFeature) {
+      launchAppFeature.supported_options = applications
+        .filter((application) => application.visible)
+        .map((application) => ({
+          value: application.id,
+          label: application.title,
+        }));
+
+      await gladys.publishDiscoveredDevices([device]);
+    }
   }
 
   try {

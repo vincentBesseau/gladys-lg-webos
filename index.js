@@ -146,14 +146,14 @@ gladys.onSetValue(async (device, feature, value) => {
 
   if (!client && feature.external_id.endsWith(':binary') && Number(value) === 1) {
     logger.info('LG webOS Power command interpreted as ON -> Wake-on-LAN');
-    return setTelevisionValue({ client: null, config, feature, value });
+    return setTelevisionValue({ gladys, client: null, config, feature, value });
   }
 
   if (!client) {
     throw new Error('LG webOS TV is not connected.');
   }
 
-  await setTelevisionValue({ client, config, feature, value });
+  await setTelevisionValue({ gladys, client, config, feature, value });
 });
 
 gladys.onAction('test_connection', async () => {

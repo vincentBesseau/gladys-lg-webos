@@ -16,12 +16,16 @@ export function createFakeGladys() {
   const cameraImages = [];
   const transports = [];
   const connectionStatuses = [];
+  const discoveredDevices = [];
+  const wakeOnLanCalls = [];
 
   return {
     published,
     cameraImages,
     transports,
     connectionStatuses,
+    discoveredDevices,
+    wakeOnLanCalls,
 
     externalIds(type, platformId) {
       const device = `${type}:${platformId}`;
@@ -37,8 +41,19 @@ export function createFakeGladys() {
 
     async publishStates(states) {
       for (const s of states) {
-        published.push({ featureExternalId: s.device_feature_external_id, state: s.state });
+        published.push({
+          featureExternalId: s.device_feature_external_id,
+          ...(s.text !== undefined ? { text: s.text } : { state: s.state }),
+        });
       }
+    },
+
+    async publishDiscoveredDevices(devices) {
+      discoveredDevices.push(...devices);
+    },
+
+    async wakeOnLan(mac, options) {
+      wakeOnLanCalls.push({ mac, options });
     },
 
     async publishCameraImage(deviceExternalId, image) {
