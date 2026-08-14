@@ -31,10 +31,12 @@ async function scanTelevisions() {
   const devices = televisions.map((television) =>
     buildDiscoveredTelevisionDevice(gladys, television, config),
   );
+
   await gladys.publishDiscoveredDevices(devices);
 
   if (config.tv_udn) {
     const current = televisions.find((television) => television.udn === config.tv_udn);
+
     if (current && current.ip !== config.tv_ip) {
       config = normalizeConfig({
         ...config,
@@ -72,8 +74,6 @@ async function connectTv() {
   await disconnectTv();
   validateConfig(config);
 
-  // Newer LG firmwares can require wss://:3001 with a self-signed certificate.
-  // This integration only talks to the configured local TV, so allow that local certificate.
   if (config.connection_mode !== 'ws') {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
   }
@@ -116,7 +116,9 @@ async function connectTv() {
     logger.info('LG webOS connection closed: publishing Power OFF.');
 
     logger.info(
-      `LG webOS power debug: socket close, clientIsNext=${client === nextClient}, wakingUp=${wakingUp}`,
+      `LG webOS power debug: socket close, clientIsNext=${
+        client === nextClient
+      }, wakingUp=${wakingUp}`,
     );
 
     if (client === nextClient) {
@@ -157,7 +159,9 @@ async function reconnectTvAfterWake() {
       logger.info(`LG webOS reconnect attempt ${attempt}/${maxAttempts} after Wake-on-LAN`);
 
       logger.info(
-        `LG webOS power debug: reconnect attempt ${attempt}, clientBefore=${Boolean(client)}, wakingUp=${wakingUp}`,
+        `LG webOS power debug: reconnect attempt ${attempt}, clientBefore=${Boolean(
+          client,
+        )}, wakingUp=${wakingUp}`,
       );
 
       await connectTv();
@@ -173,7 +177,9 @@ async function reconnectTvAfterWake() {
       return;
     } catch (error) {
       logger.info(
-        `LG webOS power debug: reconnect attempt ${attempt} failed, clientNow=${Boolean(client)}, wakingUp=${wakingUp}`,
+        `LG webOS power debug: reconnect attempt ${attempt} failed, clientNow=${Boolean(
+          client,
+        )}, wakingUp=${wakingUp}`,
       );
 
       logger.debug(
@@ -239,7 +245,9 @@ gladys.onDeviceCreated(adoptDiscoveredDevice);
 
 gladys.onSetValue(async (device, feature, value) => {
   logger.info(
-    `LG webOS onSetValue: feature=${feature.external_id}, value=${JSON.stringify(value)}, clientConnected=${Boolean(client)}`,
+    `LG webOS onSetValue: feature=${feature.external_id}, value=${JSON.stringify(
+      value,
+    )}, clientConnected=${Boolean(client)}`,
   );
 
   logger.info(
