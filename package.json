@@ -10,8 +10,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node --test",
-    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include='src/**/*.js' --test-coverage-include='index.js'"
+    "test": "node --test"
   },
   "engines": {
     "node": ">=22"
