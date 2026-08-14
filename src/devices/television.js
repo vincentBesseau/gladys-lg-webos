@@ -273,6 +273,12 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
           label: application.title,
         }));
 
+      logger.info(
+        `LG webOS launch-app supported_options: ${JSON.stringify(
+          launchAppFeature.supported_options,
+        )}`,
+      );
+
       await gladys.publishDiscoveredDevices([device]);
     }
   }
