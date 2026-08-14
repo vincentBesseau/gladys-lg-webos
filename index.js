@@ -17,6 +17,7 @@ const gladys = new GladysIntegration();
 let config = normalizeConfig();
 let client = null;
 let stopSubscriptions = () => {};
+let wakingUp = false;
 
 async function publishConfiguredDevice() {
   const device = buildTelevisionDevice(gladys, config);
@@ -43,7 +44,9 @@ async function scanTelevisions() {
 }
 
 async function disconnectTv() {
-  await publishPowerState(gladys, config, 0).catch(() => {});
+  if (!wakingUp) {
+    await publishPowerState(gladys, config, 0).catch(() => {});
+  }
 
   stopSubscriptions();
   stopSubscriptions = () => {};
@@ -87,16 +90,18 @@ async function connectTv() {
       client = null;
     }
 
-    publishPowerState(gladys, config, 0).catch((error) => {
-      logger.warn('Unable to publish LG webOS Power OFF state', error);
-    });
+    if (!wakingUp) {
+      publishPowerState(gladys, config, 0).catch((error) => {
+        logger.warn('Unable to publish LG webOS Power OFF state', error);
+      });
 
-    gladys
-      .setConnectionStatus(false, {
-        en: 'The TV is offline or unreachable.',
-        fr: 'La TV est éteinte ou injoignable.',
-      })
-      .catch(() => {});
+      gladys
+        .setConnectionStatus(false, {
+          en: 'The TV is offline or unreachable.',
+          fr: 'La TV est éteinte ou injoignable.',
+        })
+        .catch(() => {});
+    }
   });
   await nextClient.connect();
   client = nextClient;
@@ -116,6 +121,9 @@ async function reconnectTvAfterWake() {
 
       await connectTv();
 
+      wakingUp = false;
+      await publishPowerState(gladys, config, 1).catch(() => {});
+
       logger.info('LG webOS reconnected after Wake-on-LAN');
       return;
     } catch (error) {
@@ -129,6 +137,9 @@ async function reconnectTvAfterWake() {
       await new Promise((resolve) => setTimeout(resolve, retryDelay));
     }
   }
+
+  wakingUp = false;
+  await publishPowerState(gladys, config, 0).catch(() => {});
 
   logger.warn('LG webOS did not reconnect within 30 seconds after Wake-on-LAN');
 }
@@ -173,15 +184,22 @@ gladys.onSetValue(async (device, feature, value) => {
   );
 
   if (!client && feature.external_id.endsWith(`:${FEATURE_KEYS.POWER}`) && Number(value) === 1) {
+    wakingUp = true;
     logger.info('LG webOS Power command interpreted as ON -> Wake-on-LAN');
 
-    await setTelevisionValue({
-      gladys,
-      client: null,
-      config,
-      feature,
-      value,
-    });
+    try {
+      await setTelevisionValue({
+        gladys,
+        client: null,
+        config,
+        feature,
+        value,
+      });
+    } catch (error) {
+      wakingUp = false;
+      logger.warn('Unable to set LG webOS Power ON', error);
+      throw error;
+    }
 
     reconnectTvAfterWake().catch((error) => {
       logger.warn('Unable to reconnect LG webOS after Wake-on-LAN', error);
