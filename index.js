@@ -1,6 +1,7 @@
 import { GladysIntegration, logger } from '@gladysassistant/integration-sdk';
 import { normalizeConfig, validateConfig } from './src/config.js';
 import {
+  FEATURE_KEYS,
   buildDiscoveredTelevisionDevice,
   buildTelevisionDevice,
   paramsToObject,
@@ -105,6 +106,33 @@ async function connectTv() {
   logger.info(`LG webOS connected through ${client.connectedUrl}`);
 }
 
+async function reconnectTvAfterWake() {
+  const maxAttempts = 15;
+  const retryDelay = 2000;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      logger.info(`LG webOS reconnect attempt ${attempt}/${maxAttempts} after Wake-on-LAN`);
+
+      await connectTv();
+
+      logger.info('LG webOS reconnected after Wake-on-LAN');
+      return;
+    } catch (error) {
+      logger.debug(
+        `LG webOS reconnect attempt ${attempt}/${maxAttempts} failed after Wake-on-LAN`,
+        error,
+      );
+    }
+
+    if (attempt < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelay));
+    }
+  }
+
+  logger.warn('LG webOS did not reconnect within 30 seconds after Wake-on-LAN');
+}
+
 async function adoptDiscoveredDevice(device) {
   const params = paramsToObject(device);
   if (!params.ip || !params.udn) return;
@@ -144,9 +172,22 @@ gladys.onSetValue(async (device, feature, value) => {
     `LG webOS onSetValue: feature=${feature.external_id}, value=${JSON.stringify(value)}, clientConnected=${Boolean(client)}`,
   );
 
-  if (!client && feature.external_id.endsWith(':binary') && Number(value) === 1) {
+  if (!client && feature.external_id.endsWith(`:${FEATURE_KEYS.POWER}`) && Number(value) === 1) {
     logger.info('LG webOS Power command interpreted as ON -> Wake-on-LAN');
-    return setTelevisionValue({ gladys, client: null, config, feature, value });
+
+    await setTelevisionValue({
+      gladys,
+      client: null,
+      config,
+      feature,
+      value,
+    });
+
+    reconnectTvAfterWake().catch((error) => {
+      logger.warn('Unable to reconnect LG webOS after Wake-on-LAN', error);
+    });
+
+    return;
   }
 
   if (!client) {

@@ -279,7 +279,8 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
         )}`,
       );
 
-      await gladys.publishDiscoveredDevices([device]);
+      // TODO: Re-enable when Integration SDK accepts string-valued supported_options for text/select.
+      // await gladys.publishDiscoveredDevices([device]);
     }
   }
 
