@@ -120,6 +120,8 @@ export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
       }),
       textFeature(ids, FEATURE_KEYS.SOURCE, 'Source', {
         readOnly: false,
+        type: 'select',
+        supportedOptions: [],
       }),
       textFeature(ids, FEATURE_KEYS.CURRENT_APP, 'Application courante'),
       textFeature(ids, FEATURE_KEYS.LAUNCH_APP, 'Lancer une application', {
@@ -358,9 +360,6 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
           launchAppFeature.supported_options,
         )}`,
       );
-
-      // TODO: Re-enable when Integration SDK accepts string-valued supported_options for text/select.
-      // await gladys.publishDiscoveredDevices([device]);
     }
   }
 
@@ -380,6 +379,26 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
   } catch (error) {
     logger.warn('Unable to retrieve LG webOS external inputs', error);
   }
+
+  if (inputs.length) {
+    const sourceFeature = device.features.find(
+      (feature) => feature.external_id.split(':').at(-1) === FEATURE_KEYS.SOURCE,
+    );
+
+    if (sourceFeature) {
+      sourceFeature.supported_options = inputs.map((input) => ({
+        value: input.id,
+        label: input.label,
+      }));
+
+      logger.info(
+        `LG webOS source supported_options: ${JSON.stringify(sourceFeature.supported_options)}`,
+      );
+    }
+  }
+
+  // TODO: Re-enable when Integration SDK accepts string-valued supported_options for text/select.
+  // await gladys.publishDiscoveredDevices([device]);
 
   cleanups.push(
     await client.subscribe(WEBOS_COMMANDS.GET_POWER_STATE, async (payload) => {
