@@ -140,6 +140,7 @@ test('dispatches writable television features', async () => {
       options: {
         address: '192.168.1.255',
         port: 9,
+        sourcePort: 0,
       },
     },
   ]);

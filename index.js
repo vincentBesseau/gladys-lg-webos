@@ -1,87 +1,180 @@
 import { GladysIntegration, logger } from '@gladysassistant/integration-sdk';
-import { normalizeConfig, validateConfig } from './src/config.js';
+import { normalizeConfig, normalizeTelevisionsConfig, validateConfig } from './src/config.js';
 import {
   FEATURE_KEYS,
   buildDiscoveredTelevisionDevice,
   buildTelevisionDevice,
-  paramsToObject,
   publishPowerState,
   setTelevisionValue,
   startTelevisionSubscriptions,
 } from './src/devices/television.js';
 import { discoverWebOsTelevisions } from './src/discovery/ssdp.js';
+import {
+  createTelevisionRuntime,
+  createTelevisionRuntimeRegistry,
+} from './src/runtime/televisions.js';
 import { WebOsClient } from './src/webos/client.js';
-import { WEBOS_COMMANDS } from './src/webos/commands.js';
 
 const gladys = new GladysIntegration();
-let config = normalizeConfig();
-let client = null;
-let stopSubscriptions = () => {};
-let wakingUp = false;
 
-async function publishConfiguredDevice() {
-  const device = buildTelevisionDevice(gladys, config);
+const defaultRuntime = createTelevisionRuntime();
+
+const runtimeRegistry = createTelevisionRuntimeRegistry(gladys, defaultRuntime);
+
+const {
+  registerRuntime,
+  getRuntimeForDevice,
+  getOrCreateRuntimeForDevice,
+  getRuntimeId,
+  getUniqueRuntimes,
+  findRuntimeForTelevision,
+  findRuntimeById,
+  clearRuntimes,
+} = runtimeRegistry;
+
+async function updateConnectionStatus() {
+  const televisionRuntimes = getUniqueRuntimes();
+
+  if (!televisionRuntimes.length) {
+    await gladys.setConnectionStatus(false, {
+      en: 'No LG webOS TV is currently configured.',
+      fr: "Aucune TV LG webOS n'est actuellement configurée.",
+    });
+
+    return;
+  }
+
+  const connectedCount = televisionRuntimes.filter((runtime) => runtime.client).length;
+
+  if (connectedCount > 0) {
+    await gladys.setConnectionStatus(true);
+
+    logger.info(`LG webOS connected to ${connectedCount}/${televisionRuntimes.length} TV(s).`);
+
+    return;
+  }
+
+  await gladys.setConnectionStatus(false, {
+    en: 'All configured LG webOS TVs are currently unreachable.',
+    fr: 'Toutes les TV LG webOS configurées sont actuellement injoignables.',
+  });
+}
+
+async function persistRuntime(runtime) {
+  const id = getRuntimeId(runtime);
+
+  if (!id) {
+    throw new Error('Unable to persist LG webOS TV without a stable identifier.');
+  }
+
+  const savedConfig = await gladys.getConfig();
+
+  await gladys.setConfig({
+    ...savedConfig,
+    televisions: {
+      ...(savedConfig.televisions || {}),
+      [id]: runtime.config,
+    },
+  });
+}
+
+async function publishConfiguredDevice(runtime) {
+  const device = buildTelevisionDevice(gladys, runtime.config);
+
+  if (device) {
+    registerRuntime(runtime);
+  }
+
   await gladys.publishDiscoveredDevices(device ? [device] : []);
 }
 
 async function scanTelevisions() {
   const televisions = await discoverWebOsTelevisions(gladys);
+
   logger.info(`LG webOS discovery found ${televisions.length} TV(s).`);
 
-  const devices = televisions.map((television) =>
-    buildDiscoveredTelevisionDevice(gladys, television, config),
-  );
+  const devices = televisions.map((television) => {
+    const runtime = findRuntimeForTelevision(television);
+
+    return buildDiscoveredTelevisionDevice(gladys, television, runtime?.config || {});
+  });
 
   await gladys.publishDiscoveredDevices(devices);
 
-  if (config.tv_udn) {
-    const current = televisions.find((television) => television.udn === config.tv_udn);
+  for (const television of televisions) {
+    const runtime = findRuntimeForTelevision(television);
 
-    if (current && current.ip !== config.tv_ip) {
-      config = normalizeConfig({
-        ...config,
-        tv_ip: current.ip,
-        tv_name: current.name,
-      });
-
-      await gladys.setConfig({
-        tv_ip: current.ip,
-        tv_name: current.name,
-      });
-
-      logger.info(`Updated LG webOS TV IP from SSDP discovery: ${current.ip}`);
+    if (!runtime) {
+      continue;
     }
+
+    const ipChanged = television.ip && television.ip !== runtime.config.tv_ip;
+
+    const nameChanged = television.name && television.name !== runtime.config.tv_name;
+
+    if (!ipChanged && !nameChanged) {
+      continue;
+    }
+
+    runtime.config = normalizeConfig({
+      ...runtime.config,
+      ...(ipChanged
+        ? {
+            tv_ip: television.ip,
+          }
+        : {}),
+      ...(nameChanged
+        ? {
+            tv_name: television.name,
+          }
+        : {}),
+    });
+
+    registerRuntime(runtime);
+
+    await persistRuntime(runtime);
+
+    logger.info(
+      `Updated LG webOS TV from SSDP discovery: ${
+        runtime.config.tv_name || runtime.config.tv_udn
+      } (${runtime.config.tv_ip})`,
+    );
   }
 }
 
-async function disconnectTv() {
+async function disconnectTv(runtime) {
   logger.info(
-    `LG webOS power debug: disconnectTv called, hasClient=${Boolean(client)}, wakingUp=${wakingUp}`,
+    `LG webOS power debug: disconnectTv called, hasClient=${Boolean(
+      runtime.client,
+    )}, wakingUp=${runtime.wakingUp}`,
   );
 
-  if (!wakingUp) {
-    await publishPowerState(gladys, config, 0).catch(() => {});
+  if (!runtime.wakingUp) {
+    await publishPowerState(gladys, runtime.config, 0).catch(() => {});
   }
 
-  stopSubscriptions();
-  stopSubscriptions = () => {};
+  runtime.stopSubscriptions();
+  runtime.stopSubscriptions = () => {};
 
-  client?.close();
-  client = null;
+  runtime.client?.close();
+  runtime.client = null;
+
+  await updateConnectionStatus().catch(() => {});
 }
 
-async function connectTv() {
-  await disconnectTv();
-  validateConfig(config);
+async function connectTv(runtime) {
+  await disconnectTv(runtime);
 
-  if (config.connection_mode !== 'ws') {
+  validateConfig(runtime.config);
+
+  if (runtime.config.connection_mode !== 'ws') {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
   }
 
   const nextClient = new WebOsClient({
-    ip: config.tv_ip,
-    clientKey: config.client_key,
-    mode: config.connection_mode,
+    ip: runtime.config.tv_ip,
+    clientKey: runtime.config.client_key,
+    mode: runtime.config.connection_mode,
   });
 
   nextClient.on('pairing', () => {
@@ -96,15 +189,17 @@ async function connectTv() {
   });
 
   nextClient.on('registered', async (clientKey) => {
-    if (clientKey && clientKey !== config.client_key) {
-      config = {
-        ...config,
+    if (clientKey && clientKey !== runtime.config.client_key) {
+      runtime.config = {
+        ...runtime.config,
         client_key: clientKey,
       };
 
-      await gladys.setConfig({
-        client_key: clientKey,
-      });
+      await persistRuntime(runtime);
+
+      logger.info(
+        `LG webOS client key persisted for ${runtime.config.tv_name || runtime.config.tv_ip}`,
+      );
     }
   });
 
@@ -117,40 +212,41 @@ async function connectTv() {
 
     logger.info(
       `LG webOS power debug: socket close, clientIsNext=${
-        client === nextClient
-      }, wakingUp=${wakingUp}`,
+        runtime.client === nextClient
+      }, wakingUp=${runtime.wakingUp}`,
     );
 
-    if (client === nextClient) {
-      client = null;
+    if (runtime.client === nextClient) {
+      runtime.client = null;
     }
 
-    if (!wakingUp) {
-      publishPowerState(gladys, config, 0).catch((error) => {
+    if (!runtime.wakingUp) {
+      publishPowerState(gladys, runtime.config, 0).catch((error) => {
         logger.warn('Unable to publish LG webOS Power OFF state', error);
       });
-
-      gladys
-        .setConnectionStatus(false, {
-          en: 'The TV is offline or unreachable.',
-          fr: 'La TV est éteinte ou injoignable.',
-        })
-        .catch(() => {});
     }
+
+    updateConnectionStatus().catch((error) => {
+      logger.warn('Unable to update LG webOS connection status', error);
+    });
   });
 
   await nextClient.connect();
 
-  client = nextClient;
+  runtime.client = nextClient;
 
-  stopSubscriptions = await startTelevisionSubscriptions(gladys, client, config);
+  runtime.stopSubscriptions = await startTelevisionSubscriptions(
+    gladys,
+    runtime.client,
+    runtime.config,
+  );
 
-  await gladys.setConnectionStatus(true);
+  await updateConnectionStatus();
 
-  logger.info(`LG webOS connected through ${client.connectedUrl}`);
+  logger.info(`LG webOS connected through ${runtime.client.connectedUrl}`);
 }
 
-async function reconnectTvAfterWake() {
+async function reconnectTvAfterWake(runtime) {
   const maxAttempts = 15;
   const retryDelay = 2000;
 
@@ -160,17 +256,17 @@ async function reconnectTvAfterWake() {
 
       logger.info(
         `LG webOS power debug: reconnect attempt ${attempt}, clientBefore=${Boolean(
-          client,
-        )}, wakingUp=${wakingUp}`,
+          runtime.client,
+        )}, wakingUp=${runtime.wakingUp}`,
       );
 
-      await connectTv();
+      await connectTv(runtime);
 
-      wakingUp = false;
+      runtime.wakingUp = false;
 
       logger.info('LG webOS power debug: WebSocket reconnected, setting wakingUp=false');
 
-      await publishPowerState(gladys, config, 1).catch(() => {});
+      await publishPowerState(gladys, runtime.config, 1).catch(() => {});
 
       logger.info('LG webOS reconnected after Wake-on-LAN');
 
@@ -178,8 +274,8 @@ async function reconnectTvAfterWake() {
     } catch (error) {
       logger.info(
         `LG webOS power debug: reconnect attempt ${attempt} failed, clientNow=${Boolean(
-          client,
-        )}, wakingUp=${wakingUp}`,
+          runtime.client,
+        )}, wakingUp=${runtime.wakingUp}`,
       );
 
       logger.debug(
@@ -193,61 +289,59 @@ async function reconnectTvAfterWake() {
     }
   }
 
-  wakingUp = false;
+  runtime.wakingUp = false;
 
-  await publishPowerState(gladys, config, 0).catch(() => {});
+  await publishPowerState(gladys, runtime.config, 0).catch(() => {});
+
+  await updateConnectionStatus().catch(() => {});
 
   logger.warn('LG webOS did not reconnect within 30 seconds after Wake-on-LAN');
 }
 
 async function adoptDiscoveredDevice(device) {
-  const params = paramsToObject(device);
+  const params = Object.fromEntries((device?.params || []).map(({ name, value }) => [name, value]));
 
   if (!params.ip || !params.udn) {
     return;
   }
 
-  config = normalizeConfig({
-    ...config,
+  const runtime = getOrCreateRuntimeForDevice(device);
+
+  runtime.config = normalizeConfig({
     tv_ip: params.ip,
     tv_udn: params.udn,
-    tv_name: device.name || config.tv_name,
-    tv_mac: params.mac || config.tv_mac,
-    tv_platform_id: params.platform_id || config.tv_platform_id || params.udn,
+    tv_name: device.name || runtime.config.tv_name,
+    tv_mac: params.mac || runtime.config.tv_mac,
+    tv_platform_id: params.platform_id || runtime.config.tv_platform_id || params.udn,
+    connection_mode: runtime.config.connection_mode || defaultRuntime.config.connection_mode,
   });
 
-  await gladys.setConfig({
-    tv_ip: config.tv_ip,
-    tv_udn: config.tv_udn,
-    tv_name: config.tv_name,
-    tv_platform_id: config.tv_platform_id,
-    ...(config.tv_mac
-      ? {
-          tv_mac: config.tv_mac,
-        }
-      : {}),
-  });
+  registerRuntime(runtime);
+
+  await persistRuntime(runtime);
+
+  logger.info(`LG webOS TV persisted: ${runtime.config.tv_name || runtime.config.tv_ip}`);
 
   try {
-    await connectTv();
+    await connectTv(runtime);
   } catch (error) {
     logger.warn('Discovered LG webOS TV was added but is not reachable for pairing yet', error);
 
-    await gladys.setConnectionStatus(false, {
-      en: 'TV added. Turn it on and accept the pairing prompt, then test the connection.',
-      fr: "TV ajoutée. Allumez-la et acceptez la demande d'association, puis testez la connexion.",
-    });
+    await updateConnectionStatus().catch(() => {});
   }
 }
 
 gladys.onScanRequest(scanTelevisions);
+
 gladys.onDeviceCreated(adoptDiscoveredDevice);
 
 gladys.onSetValue(async (device, feature, value) => {
+  const runtime = getRuntimeForDevice(device);
+
   logger.info(
     `LG webOS onSetValue: feature=${feature.external_id}, value=${JSON.stringify(
       value,
-    )}, clientConnected=${Boolean(client)}`,
+    )}, clientConnected=${Boolean(runtime.client)}`,
   );
 
   logger.info(
@@ -255,13 +349,17 @@ gladys.onSetValue(async (device, feature, value) => {
       .split(':')
       .at(-1)}, rawValue=${JSON.stringify(value)}, numericValue=${Number(
       value,
-    )}, hasClient=${Boolean(client)}, wakingUp=${wakingUp}`,
+    )}, hasClient=${Boolean(runtime.client)}, wakingUp=${runtime.wakingUp}`,
   );
 
-  if (!client && feature.external_id.endsWith(`:${FEATURE_KEYS.POWER}`) && Number(value) === 1) {
+  if (
+    !runtime.client &&
+    feature.external_id.endsWith(`:${FEATURE_KEYS.POWER}`) &&
+    Number(value) === 1
+  ) {
     logger.info('LG webOS power debug: entering OFF -> ON Wake-on-LAN branch');
 
-    wakingUp = true;
+    runtime.wakingUp = true;
 
     logger.info('LG webOS Power command interpreted as ON -> Wake-on-LAN');
 
@@ -269,122 +367,254 @@ gladys.onSetValue(async (device, feature, value) => {
       await setTelevisionValue({
         gladys,
         client: null,
-        config,
+        config: runtime.config,
         feature,
         value,
       });
 
-      await publishPowerState(gladys, config, 1).catch(() => {});
+      await publishPowerState(gladys, runtime.config, 1).catch(() => {});
 
       logger.info('LG webOS power debug: optimistic Power=1 published after Wake-on-LAN');
     } catch (error) {
-      wakingUp = false;
+      runtime.wakingUp = false;
 
       logger.warn('Unable to set LG webOS Power ON', error);
 
       throw error;
     }
 
-    reconnectTvAfterWake().catch((error) => {
+    reconnectTvAfterWake(runtime).catch((error) => {
       logger.warn('Unable to reconnect LG webOS after Wake-on-LAN', error);
     });
 
     return;
   }
 
-  if (!client) {
+  if (!runtime.client) {
     throw new Error('LG webOS TV is not connected.');
   }
 
   await setTelevisionValue({
     gladys,
-    client,
-    config,
+    client: runtime.client,
+    config: runtime.config,
     feature,
     value,
   });
 });
 
 gladys.onAction('test_connection', async () => {
-  await connectTv();
+  const televisionRuntimes = getUniqueRuntimes();
 
-  return {
-    en: `Connected to ${config.tv_name}.`,
-    fr: `Connexion à ${config.tv_name} réussie.`,
-  };
-});
-
-gladys.onAction('test_toast', async (fields) => {
-  if (!client) {
-    await connectTv();
+  if (!televisionRuntimes.length) {
+    throw new Error('No LG webOS TV is configured.');
   }
 
-  await client.request(WEBOS_COMMANDS.CREATE_TOAST, {
-    message: fields.message || 'Hello from Gladys Assistant!',
-  });
+  const results = await Promise.all(
+    televisionRuntimes.map(async (runtime) => {
+      try {
+        await connectTv(runtime);
+
+        return {
+          runtime,
+          success: true,
+        };
+      } catch (error) {
+        logger.warn(
+          `Unable to connect to LG webOS TV ${
+            runtime.config.tv_name || runtime.config.tv_ip
+          } during connection test`,
+          error,
+        );
+
+        return {
+          runtime,
+          success: false,
+        };
+      }
+    }),
+  );
+
+  await updateConnectionStatus();
+
+  const connected = results.filter((result) => result.success);
+
+  const failed = results.filter((result) => !result.success);
+
+  const connectedNames = connected.map(
+    ({ runtime }) => runtime.config.tv_name || runtime.config.tv_ip,
+  );
+
+  const failedNames = failed.map(({ runtime }) => runtime.config.tv_name || runtime.config.tv_ip);
 
   return {
-    en: 'Toast sent to the TV.',
-    fr: 'Notification envoyée sur la TV.',
+    en:
+      failed.length === 0
+        ? `Successfully connected to ${connected.length} TV(s): ${connectedNames.join(', ')}.`
+        : `Connected to ${connected.length}/${results.length} TV(s). Connected: ${
+            connectedNames.join(', ') || 'none'
+          }. Unreachable: ${failedNames.join(', ')}.`,
+    fr:
+      failed.length === 0
+        ? `Connexion réussie à ${connected.length} TV : ${connectedNames.join(', ')}.`
+        : `Connexion à ${connected.length}/${results.length} TV. Connectées : ${
+            connectedNames.join(', ') || 'aucune'
+          }. Injoignables : ${failedNames.join(', ')}.`,
   };
 });
 
 gladys.onConfigUpdated(async (newConfig) => {
-  config = normalizeConfig(newConfig);
+  const globalConfig = normalizeConfig(newConfig);
 
-  await publishConfiguredDevice();
+  defaultRuntime.config = globalConfig;
 
-  if (!config.tv_ip) {
-    await disconnectTv();
+  const televisionsConfig = normalizeTelevisionsConfig(newConfig);
 
-    await gladys.setConnectionStatus(false, {
-      en: 'Run a network scan or configure the TV IP address.',
-      fr: "Lancez une découverte réseau ou configurez l'adresse IP de la TV.",
-    });
+  if (Object.keys(televisionsConfig).length) {
+    for (const [id, televisionConfig] of Object.entries(televisionsConfig)) {
+      let runtime = findRuntimeById(id);
+
+      if (!runtime) {
+        runtime = createTelevisionRuntime(televisionConfig);
+
+        registerRuntime(runtime);
+      } else {
+        runtime.config = normalizeConfig({
+          ...runtime.config,
+          ...televisionConfig,
+        });
+
+        registerRuntime(runtime);
+      }
+    }
+
+    const connectionMode = globalConfig.connection_mode;
+
+    if (connectionMode) {
+      for (const runtime of getUniqueRuntimes()) {
+        if (runtime.config.connection_mode === connectionMode) {
+          continue;
+        }
+
+        runtime.config = normalizeConfig({
+          ...runtime.config,
+          connection_mode: connectionMode,
+        });
+
+        await persistRuntime(runtime);
+      }
+    }
+
+    await Promise.all(
+      getUniqueRuntimes().map(async (runtime) => {
+        try {
+          await publishConfiguredDevice(runtime);
+
+          await connectTv(runtime);
+        } catch (error) {
+          logger.warn(
+            `Unable to reconnect LG webOS TV ${
+              runtime.config.tv_name || runtime.config.tv_ip
+            } after configuration update`,
+            error,
+          );
+        }
+      }),
+    );
+
+    await updateConnectionStatus();
 
     return;
   }
 
+  for (const runtime of getUniqueRuntimes()) {
+    if (runtime !== defaultRuntime) {
+      await disconnectTv(runtime).catch(() => {});
+    }
+  }
+
+  clearRuntimes();
+
+  if (!defaultRuntime.config.tv_ip) {
+    await updateConnectionStatus();
+
+    return;
+  }
+
+  registerRuntime(defaultRuntime);
+
+  await publishConfiguredDevice(defaultRuntime);
+
   try {
-    await connectTv();
+    await connectTv(defaultRuntime);
   } catch (error) {
     logger.warn('Unable to connect to LG webOS after configuration update', error);
 
-    await gladys.setConnectionStatus(false, {
-      en: 'Unable to connect to the TV. Check its IP and network settings.',
-      fr: 'Impossible de se connecter à la TV. Vérifiez son IP et ses réglages réseau.',
-    });
+    await updateConnectionStatus();
   }
 });
 
 gladys.on('connected', async () => {
-  config = normalizeConfig(await gladys.getConfig());
+  const savedConfig = await gladys.getConfig();
 
-  await publishConfiguredDevice();
+  defaultRuntime.config = normalizeConfig(savedConfig);
 
-  if (!config.tv_ip) {
-    await gladys.setConnectionStatus(false, {
-      en: 'Run a network scan to discover your LG webOS TV, or configure it manually.',
-      fr: 'Lancez une découverte réseau pour trouver votre TV LG webOS, ou configurez-la manuellement.',
-    });
+  const televisionsConfig = normalizeTelevisionsConfig(savedConfig);
+
+  clearRuntimes();
+
+  if (!Object.keys(televisionsConfig).length) {
+    registerRuntime(defaultRuntime);
+
+    await publishConfiguredDevice(defaultRuntime);
+
+    if (!defaultRuntime.config.tv_ip) {
+      await updateConnectionStatus();
+
+      return;
+    }
+
+    try {
+      await connectTv(defaultRuntime);
+    } catch (error) {
+      logger.warn('LG webOS TV is currently unreachable', error);
+
+      await updateConnectionStatus();
+    }
 
     return;
   }
 
-  try {
-    await connectTv();
-  } catch (error) {
-    logger.warn('LG webOS TV is currently unreachable', error);
+  const televisionRuntimes = Object.values(televisionsConfig).map((televisionConfig) => {
+    const runtime = createTelevisionRuntime(televisionConfig);
 
-    await gladys.setConnectionStatus(false, {
-      en: 'TV unreachable. Turn it on to pair or connect.',
-      fr: "TV injoignable. Allumez-la pour l'associer ou vous connecter.",
-    });
-  }
+    registerRuntime(runtime);
+
+    return runtime;
+  });
+
+  logger.info(`LG webOS loading ${televisionRuntimes.length} configured TV(s).`);
+
+  await Promise.all(
+    televisionRuntimes.map(async (runtime) => {
+      await publishConfiguredDevice(runtime);
+
+      try {
+        await connectTv(runtime);
+      } catch (error) {
+        logger.warn(
+          `LG webOS TV ${runtime.config.tv_name || runtime.config.tv_ip} is currently unreachable`,
+          error,
+        );
+      }
+    }),
+  );
+
+  await updateConnectionStatus();
 });
 
 gladys.handleShutdown(async () => {
-  await disconnectTv();
+  await Promise.all(getUniqueRuntimes().map((runtime) => disconnectTv(runtime)));
 });
 
 logger.info('Starting LG webOS integration...');

@@ -13,13 +13,24 @@ export function normalizeMac(value = '') {
     .trim()
     .toUpperCase()
     .replace(/[^0-9A-F]/g, '');
-  if (!compact) return '';
-  if (compact.length !== 12) return String(value).trim().toUpperCase();
+
+  if (!compact) {
+    return '';
+  }
+
+  if (compact.length !== 12) {
+    return String(value).trim().toUpperCase();
+  }
+
   return compact.match(/.{2}/g).join(':');
 }
 
 export function normalizeConfig(input = {}) {
-  const config = { ...DEFAULTS, ...input };
+  const config = {
+    ...DEFAULTS,
+    ...input,
+  };
+
   return {
     tv_ip: String(config.tv_ip ?? '').trim(),
     tv_mac: normalizeMac(config.tv_mac),
@@ -37,12 +48,54 @@ export function normalizeConfig(input = {}) {
   };
 }
 
+export function normalizeTelevisionsConfig(config = {}) {
+  const globalConfig = normalizeConfig(config);
+
+  if (
+    config.televisions &&
+    typeof config.televisions === 'object' &&
+    !Array.isArray(config.televisions)
+  ) {
+    return Object.fromEntries(
+      Object.entries(config.televisions)
+        .filter(
+          ([, television]) =>
+            television && typeof television === 'object' && !Array.isArray(television),
+        )
+        .map(([id, television]) => {
+          const normalized = normalizeConfig({
+            ...television,
+            connection_mode: television.connection_mode || globalConfig.connection_mode,
+          });
+
+          const stableId =
+            normalized.tv_platform_id || normalized.tv_udn || normalized.tv_mac || id;
+
+          return [String(stableId).trim().toLowerCase(), normalized];
+        }),
+    );
+  }
+
+  if (!globalConfig.tv_platform_id && !globalConfig.tv_udn && !globalConfig.tv_mac) {
+    return {};
+  }
+
+  const id = globalConfig.tv_platform_id || globalConfig.tv_udn || globalConfig.tv_mac;
+
+  return {
+    [String(id).trim().toLowerCase()]: globalConfig,
+  };
+}
+
 export function validateConfig(config) {
-  if (!config.tv_ip)
+  if (!config.tv_ip) {
     throw new Error('TV IP address is required. Run a network scan or configure it manually.');
+  }
+
   if (!/^([0-9]{1,3}\.){3}[0-9]{1,3}$/.test(config.tv_ip)) {
     throw new Error('TV IP address is invalid.');
   }
+
   if (config.tv_mac && !/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(config.tv_mac)) {
     throw new Error('TV MAC address is invalid.');
   }

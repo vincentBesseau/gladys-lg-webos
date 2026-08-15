@@ -122,27 +122,6 @@
         "de": "TV-Verbindung testen"
       },
       "timeout_seconds": 30
-    },
-    {
-      "key": "test_toast",
-      "label": {
-        "en": "Send a test notification",
-        "fr": "Envoyer une notification de test",
-        "de": "Testbenachrichtigung senden"
-      },
-      "timeout_seconds": 30,
-      "fields": [
-        {
-          "key": "message",
-          "type": "string",
-          "label": {
-            "en": "Message",
-            "fr": "Message",
-            "de": "Nachricht"
-          },
-          "required": false
-        }
-      ]
     }
   ]
 }
