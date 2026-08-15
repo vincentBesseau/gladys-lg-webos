@@ -414,8 +414,7 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
     }
   }
 
-  // TODO: Re-enable when Integration SDK accepts string-valued supported_options for text/select.
-  // await gladys.publishDiscoveredDevices([device]);
+  await gladys.publishDiscoveredDevices([device]);
 
   cleanups.push(
     await client.subscribe(WEBOS_COMMANDS.GET_POWER_STATE, async (payload) => {
