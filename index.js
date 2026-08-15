@@ -322,6 +322,8 @@ async function adoptDiscoveredDevice(device) {
 
   logger.info(`LG webOS TV persisted: ${runtime.config.tv_name || runtime.config.tv_ip}`);
 
+  await publishConfiguredDevice(runtime);
+
   try {
     await connectTv(runtime);
   } catch (error) {
@@ -403,6 +405,29 @@ gladys.onSetValue(async (device, feature, value) => {
   });
 });
 
+gladys.onAction('configure_tv', async (fields) => {
+  const runtime = getRuntimeForDevice({
+    external_id: fields.device,
+  });
+
+  runtime.config = normalizeConfig({
+    ...runtime.config,
+    tv_mac: fields.mac || runtime.config.tv_mac,
+  });
+
+  await persistRuntime(runtime);
+
+  logger.info(
+    `LG webOS TV configuration updated: ${runtime.config.tv_name || runtime.config.tv_ip}`,
+  );
+
+  return {
+    en: `${runtime.config.tv_name} configuration saved.`,
+    fr: `Configuration de ${runtime.config.tv_name} enregistrée.`,
+    de: `Konfiguration von ${runtime.config.tv_name} gespeichert.`,
+  };
+});
+
 gladys.onAction('test_connection', async () => {
   const televisionRuntimes = getUniqueRuntimes();
 
@@ -460,6 +485,12 @@ gladys.onAction('test_connection', async () => {
         : `Connexion à ${connected.length}/${results.length} TV. Connectées : ${
             connectedNames.join(', ') || 'aucune'
           }. Injoignables : ${failedNames.join(', ')}.`,
+    de:
+      failed.length === 0
+        ? `Verbindung zu ${connected.length} TV(s) erfolgreich: ${connectedNames.join(', ')}.`
+        : `Verbindung zu ${connected.length}/${results.length} TV(s). Verbunden: ${
+            connectedNames.join(', ') || 'keine'
+          }. Nicht erreichbar: ${failedNames.join(', ')}.`,
   };
 });
 

@@ -30,50 +30,10 @@
         "de": "LG webOS TV"
       },
       "description": {
-        "en": "Start with the Discover tab. The TV must be turned on to be detected by SSDP. When connecting for the first time, an authorization request will appear on the TV and must be accepted using the remote control. Manual IP/MAC fields below are available as a fallback and for Wake-on-LAN.",
-        "fr": "Commencez par l'onglet Découvrir. La TV doit être allumée pour être détectée via SSDP. Lors de la première connexion, une demande d'autorisation s'affichera sur la TV et devra être acceptée avec la télécommande. Les champs IP/MAC ci-dessous restent disponibles en secours et pour le Wake-on-LAN.",
-        "de": "Beginnen Sie mit dem Tab Entdecken. Der Fernseher muss eingeschaltet sein, damit er über SSDP erkannt werden kann. Bei der ersten Verbindung erscheint eine Autorisierungsanfrage auf dem Fernseher, die mit der Fernbedienung bestätigt werden muss. Die manuellen IP-/MAC-Felder unten stehen als Alternative und für Wake-on-LAN zur Verfügung."
+        "en": "Start with the Discover tab. The TV must be turned on to be detected by SSDP. When connecting for the first time, an authorization request will appear on the TV and must be accepted using the remote control. After adding a TV, use the Configure a TV action below to enter its MAC address if you want Wake-on-LAN support.",
+        "fr": "Commencez par l'onglet Découvrir. La TV doit être allumée pour être détectée via SSDP. Lors de la première connexion, une demande d'autorisation s'affichera sur la TV et devra être acceptée avec la télécommande. Après avoir ajouté une TV, utilisez l'action Configurer une TV ci-dessous pour renseigner son adresse MAC si vous souhaitez utiliser le Wake-on-LAN.",
+        "de": "Beginnen Sie mit dem Tab Entdecken. Der Fernseher muss eingeschaltet sein, damit er über SSDP erkannt werden kann. Bei der ersten Verbindung erscheint eine Autorisierungsanfrage auf dem Fernseher, die mit der Fernbedienung bestätigt werden muss. Verwenden Sie nach dem Hinzufügen eines Fernsehers die Aktion Fernseher konfigurieren unten, um seine MAC-Adresse für Wake-on-LAN einzutragen."
       }
-    },
-    {
-      "key": "tv_ip",
-      "type": "string",
-      "label": {
-        "en": "TV IP address",
-        "fr": "Adresse IP de la TV",
-        "de": "IP-Adresse des Fernsehers"
-      },
-      "description": {
-        "en": "Optional when using network discovery. A DHCP reservation or static IP address is strongly recommended to ensure the TV remains reachable at the same address.",
-        "fr": "Facultative si vous utilisez la découverte réseau. Une réservation DHCP ou une adresse IP fixe est fortement recommandée afin que la TV reste toujours accessible à la même adresse.",
-        "de": "Optional bei Verwendung der Netzwerkerkennung. Eine DHCP-Reservierung oder statische IP-Adresse wird dringend empfohlen, damit der Fernseher immer unter derselben Adresse erreichbar bleibt."
-      },
-      "required": false
-    },
-    {
-      "key": "tv_mac",
-      "type": "string",
-      "label": {
-        "en": "TV MAC address",
-        "fr": "Adresse MAC de la TV",
-        "de": "MAC-Adresse des Fernsehers"
-      },
-      "description": {
-        "en": "Optional for discovery and control, but required to turn the TV on with Wake-on-LAN.",
-        "fr": "Facultative pour la découverte et le contrôle, mais nécessaire pour allumer la TV avec Wake-on-LAN.",
-        "de": "Optional für Erkennung und Steuerung, aber erforderlich, um den Fernseher per Wake-on-LAN einzuschalten."
-      },
-      "required": false
-    },
-    {
-      "key": "tv_name",
-      "type": "string",
-      "label": {
-        "en": "TV name",
-        "fr": "Nom de la TV",
-        "de": "Name des Fernsehers"
-      },
-      "required": false
     },
     {
       "key": "connection_mode",
@@ -115,11 +75,48 @@
   ],
   "actions": [
     {
+      "key": "configure_tv",
+      "label": {
+        "en": "Configure a TV",
+        "fr": "Configurer une TV",
+        "de": "Fernseher konfigurieren"
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "TV",
+            "fr": "TV",
+            "de": "Fernseher"
+          },
+          "required": true
+        },
+        {
+          "key": "mac",
+          "type": "string",
+          "label": {
+            "en": "MAC address",
+            "fr": "Adresse MAC",
+            "de": "MAC-Adresse"
+          },
+          "description": {
+            "en": "Required only to turn this TV on with Wake-on-LAN. A DHCP reservation or static IP address is also recommended.",
+            "fr": "Nécessaire uniquement pour allumer cette TV avec le Wake-on-LAN. Une réservation DHCP ou une adresse IP fixe est également recommandée.",
+            "de": "Nur erforderlich, um diesen Fernseher per Wake-on-LAN einzuschalten. Eine DHCP-Reservierung oder statische IP-Adresse wird ebenfalls empfohlen."
+          },
+          "required": false
+        }
+      ]
+    },
+    {
       "key": "test_connection",
       "label": {
-        "en": "Test TV connection",
-        "fr": "Tester la connexion à la TV",
-        "de": "TV-Verbindung testen"
+        "en": "Test TV connections",
+        "fr": "Tester les connexions aux TV",
+        "de": "TV-Verbindungen testen"
       },
       "timeout_seconds": 30
     }
