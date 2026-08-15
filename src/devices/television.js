@@ -200,24 +200,14 @@ export async function setTelevisionValue({ gladys, client, config, feature, valu
         }
 
         logger.info(
-          'LG webOS Wake-on-LAN: sending 3 magic packets to 192.168.1.255:9 with ephemeral source ports',
+          'LG webOS Wake-on-LAN: sending 1 magic packet to 192.168.1.255:9',
         );
 
         return Promise.all([
           gladys.wakeOnLan(config.tv_mac, {
             address: '192.168.1.255',
             port: 9,
-            sourcePort: 38244,
-          }),
-          gladys.wakeOnLan(config.tv_mac, {
-            address: '192.168.1.255',
-            port: 9,
-            sourcePort: 35740,
-          }),
-          gladys.wakeOnLan(config.tv_mac, {
-            address: '192.168.1.255',
-            port: 9,
-            sourcePort: 52639,
+            sourcePort: 0,
           }),
         ]);
       }
