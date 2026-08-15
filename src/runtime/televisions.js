@@ -7,6 +7,8 @@ export function createTelevisionRuntime(config = {}) {
     client: null,
     stopSubscriptions: () => {},
     wakingUp: false,
+    reconnecting: false,
+    intentionalDisconnect: false,
   };
 }
 

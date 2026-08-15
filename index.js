@@ -156,6 +156,8 @@ async function disconnectTv(runtime) {
   runtime.stopSubscriptions();
   runtime.stopSubscriptions = () => {};
 
+  runtime.intentionalDisconnect = true;
+
   runtime.client?.close();
   runtime.client = null;
 
@@ -164,6 +166,8 @@ async function disconnectTv(runtime) {
 
 async function connectTv(runtime) {
   await disconnectTv(runtime);
+
+  runtime.intentionalDisconnect = false;
 
   validateConfig(runtime.config);
 
@@ -216,6 +220,10 @@ async function connectTv(runtime) {
       }, wakingUp=${runtime.wakingUp}`,
     );
 
+    const intentionalDisconnect = runtime.intentionalDisconnect;
+
+    runtime.intentionalDisconnect = false;
+
     if (runtime.client === nextClient) {
       runtime.client = null;
     }
@@ -229,6 +237,12 @@ async function connectTv(runtime) {
     updateConnectionStatus().catch((error) => {
       logger.warn('Unable to update LG webOS connection status', error);
     });
+
+    if (!intentionalDisconnect && !runtime.wakingUp) {
+      reconnectTvAfterUnexpectedClose(runtime).catch((error) => {
+        logger.warn('Unable to automatically reconnect LG webOS TV', error);
+      });
+    }
   });
 
   await nextClient.connect();
@@ -248,7 +262,12 @@ async function connectTv(runtime) {
 
 async function reconnectTvAfterWake(runtime) {
   const maxAttempts = 15;
+  const initialDelay = 5000;
   const retryDelay = 2000;
+
+  logger.info(`LG webOS waiting ${initialDelay / 1000}s before reconnecting after Wake-on-LAN`);
+
+  await new Promise((resolve) => setTimeout(resolve, initialDelay));
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
@@ -295,7 +314,74 @@ async function reconnectTvAfterWake(runtime) {
 
   await updateConnectionStatus().catch(() => {});
 
-  logger.warn('LG webOS did not reconnect within 30 seconds after Wake-on-LAN');
+  logger.warn(`LG webOS did not reconnect after Wake-on-LAN (${maxAttempts} attempts)`);
+}
+
+async function reconnectTvAfterUnexpectedClose(runtime) {
+  if (runtime.wakingUp || runtime.reconnecting) {
+    return;
+  }
+
+  runtime.reconnecting = true;
+
+  const maxAttempts = 10;
+  const initialDelay = 3000;
+  const retryDelay = 5000;
+
+  logger.info(
+    `LG webOS unexpected disconnect detected for ${
+      runtime.config.tv_name || runtime.config.tv_ip
+    }, reconnecting automatically`,
+  );
+
+  await new Promise((resolve) => setTimeout(resolve, initialDelay));
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    if (runtime.client) {
+      runtime.reconnecting = false;
+
+      return;
+    }
+
+    try {
+      logger.info(
+        `LG webOS automatic reconnect attempt ${attempt}/${maxAttempts} for ${
+          runtime.config.tv_name || runtime.config.tv_ip
+        }`,
+      );
+
+      await connectTv(runtime);
+
+      runtime.reconnecting = false;
+
+      logger.info(
+        `LG webOS automatically reconnected to ${runtime.config.tv_name || runtime.config.tv_ip}`,
+      );
+
+      return;
+    } catch (error) {
+      logger.debug(
+        `LG webOS automatic reconnect attempt ${attempt}/${maxAttempts} failed for ${
+          runtime.config.tv_name || runtime.config.tv_ip
+        }`,
+        error,
+      );
+    }
+
+    if (attempt < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelay));
+    }
+  }
+
+  runtime.reconnecting = false;
+
+  logger.warn(
+    `LG webOS automatic reconnect failed for ${
+      runtime.config.tv_name || runtime.config.tv_ip
+    } after ${maxAttempts} attempts`,
+  );
+
+  await updateConnectionStatus().catch(() => {});
 }
 
 async function adoptDiscoveredDevice(device) {
