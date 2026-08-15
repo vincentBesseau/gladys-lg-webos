@@ -4,12 +4,12 @@ This integration controls an LG webOS TV locally from Gladys Assistant.
 
 ## Automatic discovery
 
-1. Install and start the integration without entering an IP address.
+1. Turn the TV on, then install and start the integration without entering an IP address.
 2. Open the **Discover** tab and click **Scan**.
 3. Gladys sends an SSDP search for `urn:lge-com:service:webos-second-screen:1` from the host network.
 4. The integration reads each TV UPnP description to obtain its name, model and stable UDN.
 5. Add your TV to Gladys. Its IP address and UDN are stored automatically.
-6. Turn the TV on and accept the webOS pairing prompt on the first connection.
+6. On the first connection, a webOS pairing request appears on the TV: accept it using the remote control.
 
 The TV UDN is used as the stable identifier. A later scan can therefore refresh a changed DHCP address without recreating the Gladys device.
 

@@ -4,7 +4,8 @@
   "name": "LG webOS",
   "description": {
     "en": "Control an LG webOS television locally from Gladys Assistant.",
-    "fr": "Contrôlez localement une télévision LG webOS depuis Gladys Assistant."
+    "fr": "Contrôlez localement une télévision LG webOS depuis Gladys Assistant.",
+    "de": "Steuern Sie einen LG webOS Fernseher lokal über Gladys Assistant."
   },
   "version": "1.0.0",
   "docker_image": "ghcr.io/vincentbesseau/gladys-lg-webos:1.0.0",
@@ -25,11 +26,13 @@
       "type": "section",
       "label": {
         "en": "LG webOS TV",
-        "fr": "TV LG webOS"
+        "fr": "TV LG webOS",
+        "de": "LG webOS TV"
       },
       "description": {
-        "en": "Start with the Discover tab. Gladys performs the SSDP scan from the host network, then the integration connects locally to the selected TV. Manual IP/MAC fields below are available as a fallback and for Wake-on-LAN.",
-        "fr": "Commencez par l'onglet Découvrir. Gladys effectue le scan SSDP depuis le réseau hôte, puis l'intégration se connecte localement à la TV sélectionnée. Les champs IP/MAC ci-dessous restent disponibles en secours et pour le Wake-on-LAN."
+        "en": "Start with the Discover tab. The TV must be turned on to be detected by SSDP. When connecting for the first time, an authorization request will appear on the TV and must be accepted using the remote control. Manual IP/MAC fields below are available as a fallback and for Wake-on-LAN.",
+        "fr": "Commencez par l'onglet Découvrir. La TV doit être allumée pour être détectée via SSDP. Lors de la première connexion, une demande d'autorisation s'affichera sur la TV et devra être acceptée avec la télécommande. Les champs IP/MAC ci-dessous restent disponibles en secours et pour le Wake-on-LAN.",
+        "de": "Beginnen Sie mit dem Tab Entdecken. Der Fernseher muss eingeschaltet sein, damit er über SSDP erkannt werden kann. Bei der ersten Verbindung erscheint eine Autorisierungsanfrage auf dem Fernseher, die mit der Fernbedienung bestätigt werden muss. Die manuellen IP-/MAC-Felder unten stehen als Alternative und für Wake-on-LAN zur Verfügung."
       }
     },
     {
@@ -37,11 +40,13 @@
       "type": "string",
       "label": {
         "en": "TV IP address",
-        "fr": "Adresse IP de la TV"
+        "fr": "Adresse IP de la TV",
+        "de": "IP-Adresse des Fernsehers"
       },
       "description": {
-        "en": "Optional when using network discovery.",
-        "fr": "Facultative si vous utilisez la découverte réseau."
+        "en": "Optional when using network discovery. A DHCP reservation or static IP address is strongly recommended to ensure the TV remains reachable at the same address.",
+        "fr": "Facultative si vous utilisez la découverte réseau. Une réservation DHCP ou une adresse IP fixe est fortement recommandée afin que la TV reste toujours accessible à la même adresse.",
+        "de": "Optional bei Verwendung der Netzwerkerkennung. Eine DHCP-Reservierung oder statische IP-Adresse wird dringend empfohlen, damit der Fernseher immer unter derselben Adresse erreichbar bleibt."
       },
       "required": false
     },
@@ -50,11 +55,13 @@
       "type": "string",
       "label": {
         "en": "TV MAC address",
-        "fr": "Adresse MAC de la TV"
+        "fr": "Adresse MAC de la TV",
+        "de": "MAC-Adresse des Fernsehers"
       },
       "description": {
         "en": "Optional for discovery and control, but required to turn the TV on with Wake-on-LAN.",
-        "fr": "Facultative pour la découverte et le contrôle, mais nécessaire pour allumer la TV avec Wake-on-LAN."
+        "fr": "Facultative pour la découverte et le contrôle, mais nécessaire pour allumer la TV avec Wake-on-LAN.",
+        "de": "Optional für Erkennung und Steuerung, aber erforderlich, um den Fernseher per Wake-on-LAN einzuschalten."
       },
       "required": false
     },
@@ -63,7 +70,8 @@
       "type": "string",
       "label": {
         "en": "TV name",
-        "fr": "Nom de la TV"
+        "fr": "Nom de la TV",
+        "de": "Name des Fernsehers"
       },
       "required": false
     },
@@ -72,7 +80,8 @@
       "type": "select",
       "label": {
         "en": "Connection mode",
-        "fr": "Mode de connexion"
+        "fr": "Mode de connexion",
+        "de": "Verbindungsmodus"
       },
       "default": "auto",
       "required": false,
@@ -81,21 +90,24 @@
           "value": "auto",
           "label": {
             "en": "Automatic",
-            "fr": "Automatique"
+            "fr": "Automatique",
+            "de": "Automatisch"
           }
         },
         {
           "value": "ws",
           "label": {
             "en": "WebSocket (port 3000)",
-            "fr": "WebSocket (port 3000)"
+            "fr": "WebSocket (port 3000)",
+            "de": "WebSocket (Port 3000)"
           }
         },
         {
           "value": "wss",
           "label": {
             "en": "Secure WebSocket (port 3001)",
-            "fr": "WebSocket sécurisé (port 3001)"
+            "fr": "WebSocket sécurisé (port 3001)",
+            "de": "Sicherer WebSocket (Port 3001)"
           }
         }
       ]
@@ -106,7 +118,8 @@
       "key": "test_connection",
       "label": {
         "en": "Test TV connection",
-        "fr": "Tester la connexion à la TV"
+        "fr": "Tester la connexion à la TV",
+        "de": "TV-Verbindung testen"
       },
       "timeout_seconds": 30
     },
@@ -114,7 +127,8 @@
       "key": "test_toast",
       "label": {
         "en": "Send a test notification",
-        "fr": "Envoyer une notification de test"
+        "fr": "Envoyer une notification de test",
+        "de": "Testbenachrichtigung senden"
       },
       "timeout_seconds": 30,
       "fields": [
@@ -123,7 +137,8 @@
           "type": "string",
           "label": {
             "en": "Message",
-            "fr": "Message"
+            "fr": "Message",
+            "de": "Nachricht"
           },
           "required": false
         }
