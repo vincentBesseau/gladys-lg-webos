@@ -39,6 +39,7 @@ async function updateConnectionStatus() {
     await gladys.setConnectionStatus(false, {
       en: 'No LG webOS TV is currently configured.',
       fr: "Aucune TV LG webOS n'est actuellement configurée.",
+      de: 'Derzeit ist kein LG webOS Fernseher konfiguriert.',
     });
 
     return;
@@ -57,6 +58,7 @@ async function updateConnectionStatus() {
   await gladys.setConnectionStatus(false, {
     en: 'All configured LG webOS TVs are currently unreachable.',
     fr: 'Toutes les TV LG webOS configurées sont actuellement injoignables.',
+    de: 'Alle konfigurierten LG webOS Fernseher sind derzeit nicht erreichbar.',
   });
 }
 
@@ -188,6 +190,7 @@ async function connectTv(runtime) {
       .setConnectionStatus(false, {
         en: 'Accept the pairing request displayed on the TV.',
         fr: "Acceptez la demande d'association affichée sur la TV.",
+        de: 'Bestätigen Sie die auf dem Fernseher angezeigte Kopplungsanfrage.',
       })
       .catch(() => {});
   });

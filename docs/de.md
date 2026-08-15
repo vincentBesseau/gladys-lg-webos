@@ -1,6 +1,6 @@
 # LG webOS
 
-Diese Integration steuert einen LG webOS Fernseher lokal über Gladys Assistant.
+Diese Integration steuert LG webOS Fernseher lokal über Gladys Assistant.
 
 ## Automatische Erkennung
 
@@ -15,12 +15,18 @@ Die UDN des Fernsehers wird als stabile Kennung verwendet. Bei einem späteren S
 
 ## Wake-on-LAN
 
-SSDP stellt die MAC-Adresse des Fernsehers nicht zuverlässig bereit. Die Erkennung, die Steuerung im eingeschalteten Zustand und das Ausschalten funktionieren ohne sie, aber zum **Einschalten** des Fernsehers über Gladys muss die MAC-Adresse in der Integrationskonfiguration eingetragen sein.
+SSDP stellt die MAC-Adresse des Fernsehers nicht zuverlässig bereit. Die Steuerung im eingeschalteten Zustand und das Ausschalten funktionieren ohne MAC-Adresse, zum **Einschalten** des Fernsehers über Gladys mit Wake-on-LAN ist sie jedoch erforderlich.
 
-Eine DHCP-Reservierung für den Fernseher wird weiterhin empfohlen.
+Nachdem Sie einen Fernseher hinzugefügt haben, verwenden Sie in der Integrationskonfiguration die Aktion **Fernseher konfigurieren**, wählen Sie den entsprechenden Fernseher aus und geben Sie seine MAC-Adresse ein.
+
+Jeder hinzugefügte Fernseher besitzt eine eigene Konfiguration, sodass Wake-on-LAN mit mehreren LG webOS Fernsehern verwendet werden kann.
+
+Eine DHCP-Reservierung oder statische IP-Adresse für jeden Fernseher wird empfohlen, auch wenn die Erkennung eine geänderte IP-Adresse erkennen und aktualisieren kann.
 
 ## Verbindung
 
 Der Modus **Automatisch** versucht zuerst `ws://TV:3000` und anschließend `wss://TV:3001`. Einige neuere webOS-Firmwareversionen benötigen den sicheren Port mit einem selbstsignierten Zertifikat.
+
+Die Integration hält für jeden konfigurierten Fernseher eine WebSocket-Verbindung aufrecht. Wenn die Verbindung unerwartet unterbrochen wird, versucht sie automatisch, die Verbindung wiederherzustellen. Nach dem Einschalten über Wake-on-LAN wartet die Integration, bis webOS verfügbar ist, und stellt die Verbindung anschließend automatisch wieder her.
 
 Die Integration stellt Funktionen für Ein/Aus, Lautstärke, Stummschaltung, Wiedergabe/Pause/Stopp, Lautstärke +/-, Kanal +/- und Benachrichtigungen auf dem Fernseher bereit.
