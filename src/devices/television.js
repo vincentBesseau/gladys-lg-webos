@@ -126,13 +126,13 @@ export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
       pushButton(ids, FEATURE_KEYS.CHANNEL_UP, 'Channel +'),
       pushButton(ids, FEATURE_KEYS.CHANNEL_DOWN, 'Channel -'),
       textFeature(ids, FEATURE_KEYS.CURRENT_CHANNEL, 'Chaîne courante'),
-      pushButton(ids, FEATURE_KEYS.HOME, 'Home'),
+      /*pushButton(ids, FEATURE_KEYS.HOME, 'Home'),
       pushButton(ids, FEATURE_KEYS.BACK, 'Back'),
       pushButton(ids, FEATURE_KEYS.ENTER, 'OK'),
       pushButton(ids, FEATURE_KEYS.UP, 'Haut'),
       pushButton(ids, FEATURE_KEYS.DOWN, 'Bas'),
       pushButton(ids, FEATURE_KEYS.LEFT, 'Gauche'),
-      pushButton(ids, FEATURE_KEYS.RIGHT, 'Droite'),
+      pushButton(ids, FEATURE_KEYS.RIGHT, 'Droite'),*/
       //pushButton(ids, FEATURE_KEYS.SCREEN_OFF, 'Éteindre l’écran'),
       //pushButton(ids, FEATURE_KEYS.SCREEN_ON, 'Allumer l’écran'),
       textFeature(ids, FEATURE_KEYS.TOAST, 'Message TV', {
@@ -265,7 +265,7 @@ export async function setTelevisionValue({ gladys, client, config, feature, valu
     case FEATURE_KEYS.CHANNEL_DOWN:
       return client.request(WEBOS_COMMANDS.CHANNEL_DOWN);
 
-    case FEATURE_KEYS.HOME:
+    /*case FEATURE_KEYS.HOME:
       return client.sendButton('HOME');
 
     case FEATURE_KEYS.BACK:
@@ -284,7 +284,7 @@ export async function setTelevisionValue({ gladys, client, config, feature, valu
       return client.sendButton('LEFT');
 
     case FEATURE_KEYS.RIGHT:
-      return client.sendButton('RIGHT');
+      return client.sendButton('RIGHT');*/
 
     //case FEATURE_KEYS.SCREEN_OFF:
     //  return client.request(WEBOS_COMMANDS.SCREEN_OFF);
