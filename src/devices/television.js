@@ -133,8 +133,8 @@ export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
       pushButton(ids, FEATURE_KEYS.DOWN, 'Bas'),
       pushButton(ids, FEATURE_KEYS.LEFT, 'Gauche'),
       pushButton(ids, FEATURE_KEYS.RIGHT, 'Droite'),
-      pushButton(ids, FEATURE_KEYS.SCREEN_OFF, 'Éteindre l’écran'),
-      pushButton(ids, FEATURE_KEYS.SCREEN_ON, 'Allumer l’écran'),
+      //pushButton(ids, FEATURE_KEYS.SCREEN_OFF, 'Éteindre l’écran'),
+      //pushButton(ids, FEATURE_KEYS.SCREEN_ON, 'Allumer l’écran'),
       textFeature(ids, FEATURE_KEYS.TOAST, 'Message TV', {
         readOnly: false,
       }),
@@ -286,11 +286,11 @@ export async function setTelevisionValue({ gladys, client, config, feature, valu
     case FEATURE_KEYS.RIGHT:
       return client.sendButton('RIGHT');
 
-    case FEATURE_KEYS.SCREEN_OFF:
-      return client.request(WEBOS_COMMANDS.SCREEN_OFF);
+    //case FEATURE_KEYS.SCREEN_OFF:
+    //  return client.request(WEBOS_COMMANDS.SCREEN_OFF);
 
-    case FEATURE_KEYS.SCREEN_ON:
-      return client.request(WEBOS_COMMANDS.SCREEN_ON);
+    //case FEATURE_KEYS.SCREEN_ON:
+    //  return client.request(WEBOS_COMMANDS.SCREEN_ON);
 
     case FEATURE_KEYS.TOAST: {
       const message = typeof value === 'object' && value?.text !== undefined ? value.text : value;

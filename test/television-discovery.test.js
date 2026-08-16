@@ -1592,7 +1592,7 @@ test('dispatches writable television features', async () => {
     value: 1,
   });
 
-  await setTelevisionValue({
+  /*await setTelevisionValue({
     gladys: fakeGladys,
     client,
     config,
@@ -1606,7 +1606,7 @@ test('dispatches writable television features', async () => {
     config,
     feature: feature(FEATURE_KEYS.SCREEN_ON),
     value: 1,
-  });
+  });*/
 
   await setTelevisionValue({
     gladys: fakeGladys,
@@ -1679,14 +1679,14 @@ test('dispatches writable television features', async () => {
       uri: WEBOS_COMMANDS.CHANNEL_DOWN,
       payload: undefined,
     },
-    {
+    /*{
       uri: WEBOS_COMMANDS.SCREEN_OFF,
       payload: undefined,
     },
     {
       uri: WEBOS_COMMANDS.SCREEN_ON,
       payload: undefined,
-    },
+    },*/
     {
       uri: WEBOS_COMMANDS.CREATE_TOAST,
       payload: {

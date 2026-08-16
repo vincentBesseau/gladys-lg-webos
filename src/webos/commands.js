@@ -19,6 +19,6 @@ export const WEBOS_COMMANDS = Object.freeze({
   GET_EXTERNAL_INPUT_LIST: 'ssap://tv/getExternalInputList',
   SWITCH_INPUT: 'ssap://tv/switchInput',
   GET_POWER_STATE: 'ssap://com.webos.service.tvpower/power/getPowerState',
-  SCREEN_OFF: 'ssap://com.webos.service.tvpower/power/turnOffScreen',
-  SCREEN_ON: 'ssap://com.webos.service.tvpower/power/turnOnScreen',
+  //SCREEN_OFF: 'ssap://com.webos.service.tvpower/power/turnOffScreen',
+  //SCREEN_ON: 'ssap://com.webos.service.tvpower/power/turnOnScreen',
 });
