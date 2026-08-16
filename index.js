@@ -443,21 +443,19 @@ gladys.onSetValue(async (device, feature, value) => {
     )}, hasClient=${Boolean(runtime.client)}, wakingUp=${runtime.wakingUp}`,
   );
 
-  if (
-    !runtime.client &&
-    feature.external_id.endsWith(`:${FEATURE_KEYS.POWER}`) &&
-    Number(value) === 1
-  ) {
-    logger.info('LG webOS power debug: entering OFF -> ON Wake-on-LAN branch');
+  if (feature.external_id.endsWith(`:${FEATURE_KEYS.POWER}`) && Number(value) === 1) {
+    logger.info('LG webOS power debug: entering ON Wake-on-LAN branch');
 
-    runtime.wakingUp = true;
+    const wasConnected = Boolean(runtime.client);
+
+    runtime.wakingUp = !wasConnected;
 
     logger.info('LG webOS Power command interpreted as ON -> Wake-on-LAN');
 
     try {
       await setTelevisionValue({
         gladys,
-        client: null,
+        client: runtime.client,
         config: runtime.config,
         feature,
         value,
@@ -474,9 +472,11 @@ gladys.onSetValue(async (device, feature, value) => {
       throw error;
     }
 
-    reconnectTvAfterWake(runtime).catch((error) => {
-      logger.warn('Unable to reconnect LG webOS after Wake-on-LAN', error);
-    });
+    if (!wasConnected) {
+      reconnectTvAfterWake(runtime).catch((error) => {
+        logger.warn('Unable to reconnect LG webOS after Wake-on-LAN', error);
+      });
+    }
 
     return;
   }
@@ -495,13 +495,27 @@ gladys.onSetValue(async (device, feature, value) => {
 });
 
 gladys.onAction('configure_tv', async (fields) => {
+  if (!fields.device) {
+    throw new Error('Select an LG webOS TV before saving its MAC address.');
+  }
+
+  const mac = String(fields.mac || '').trim();
+
+  if (mac && !/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(mac)) {
+    throw new Error('Invalid MAC address format. Expected AA:BB:CC:DD:EE:FF.');
+  }
+
   const runtime = getRuntimeForDevice({
     external_id: fields.device,
   });
 
+  if (!runtime?.config?.tv_ip) {
+    throw new Error('Unable to find the selected LG webOS TV.');
+  }
+
   runtime.config = normalizeConfig({
     ...runtime.config,
-    tv_mac: fields.mac || runtime.config.tv_mac,
+    tv_mac: mac || runtime.config.tv_mac,
   });
 
   await persistRuntime(runtime);

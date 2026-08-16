@@ -205,12 +205,6 @@ export async function setTelevisionValue({ gladys, client, config, feature, valu
       logger.info(`LG webOS Power received value=${value}`);
 
       if (Number(value) === 1) {
-        if (client) {
-          logger.info('LG webOS Power => ON from Active Standby');
-
-          return client.request(WEBOS_COMMANDS.TURN_OFF);
-        }
-
         logger.info('LG webOS Power => ON via Wake-on-LAN');
 
         if (!config.tv_mac) {
