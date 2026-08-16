@@ -452,8 +452,14 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
       logger.info(`LG webOS real power state: ${JSON.stringify(payload)}`);
 
       const state = String(payload.state || '').toLowerCase();
+      const processing = String(payload.processing || '').toLowerCase();
 
-      const isOn = state === 'active' || state === 'screen off';
+      const isPoweringOff =
+        processing.includes('power off') ||
+        processing.includes('active standby') ||
+        processing.includes('suspend');
+
+      const isOn = !isPoweringOff && (state === 'active' || state === 'screen off');
 
       await gladys.publishState(byType.get(FEATURE_KEYS.POWER).external_id, isOn ? 1 : 0);
     }),
