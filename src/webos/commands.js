@@ -9,6 +9,8 @@ export const WEBOS_COMMANDS = Object.freeze({
   VOLUME_DOWN: 'ssap://audio/volumeDown',
   CHANNEL_UP: 'ssap://tv/channelUp',
   CHANNEL_DOWN: 'ssap://tv/channelDown',
+  GET_CURRENT_CHANNEL: 'ssap://tv/getCurrentChannel',
+  GET_POINTER_INPUT_SOCKET: 'ssap://com.webos.service.networkinput/getPointerInputSocket',
   TURN_OFF: 'ssap://system/turnOff',
   CREATE_TOAST: 'ssap://system.notifications/createToast',
   FOREGROUND_APP: 'ssap://com.webos.applicationManager/getForegroundAppInfo',
@@ -17,4 +19,6 @@ export const WEBOS_COMMANDS = Object.freeze({
   GET_EXTERNAL_INPUT_LIST: 'ssap://tv/getExternalInputList',
   SWITCH_INPUT: 'ssap://tv/switchInput',
   GET_POWER_STATE: 'ssap://com.webos.service.tvpower/power/getPowerState',
+  SCREEN_OFF: 'ssap://com.webos.service.tvpower/power/turnOffScreen',
+  SCREEN_ON: 'ssap://com.webos.service.tvpower/power/turnOnScreen',
 });

@@ -12,11 +12,19 @@ export const FEATURE_KEYS = Object.freeze({
   STOP: 'stop',
   CHANNEL_UP: 'channel-up',
   CHANNEL_DOWN: 'channel-down',
+  CURRENT_CHANNEL: 'current-channel',
+  HOME: 'home',
+  BACK: 'back',
+  ENTER: 'enter',
+  UP: 'up',
+  DOWN: 'down',
+  LEFT: 'left',
+  RIGHT: 'right',
+  SCREEN_OFF: 'screen-off',
+  SCREEN_ON: 'screen-on',
   TOAST: 'toast',
   SOURCE: 'source',
-  CURRENT_APP: 'current-app',
   LAUNCH_APP: 'launch-app',
-  INPUT_STATUS: 'input-status',
 });
 
 const textFeature = (
@@ -59,7 +67,9 @@ function stablePlatformId(value) {
 export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
   const hardwareId = stableId || config.tv_platform_id || config.tv_udn || config.tv_mac;
 
-  if (!hardwareId) return null;
+  if (!hardwareId) {
+    return null;
+  }
 
   const ids = gladys.externalIds('lg-webos', stablePlatformId(hardwareId));
 
@@ -115,6 +125,16 @@ export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
       pushButton(ids, FEATURE_KEYS.STOP, 'Stop'),
       pushButton(ids, FEATURE_KEYS.CHANNEL_UP, 'Channel +'),
       pushButton(ids, FEATURE_KEYS.CHANNEL_DOWN, 'Channel -'),
+      textFeature(ids, FEATURE_KEYS.CURRENT_CHANNEL, 'Chaîne courante'),
+      pushButton(ids, FEATURE_KEYS.HOME, 'Home'),
+      pushButton(ids, FEATURE_KEYS.BACK, 'Back'),
+      pushButton(ids, FEATURE_KEYS.ENTER, 'OK'),
+      pushButton(ids, FEATURE_KEYS.UP, 'Haut'),
+      pushButton(ids, FEATURE_KEYS.DOWN, 'Bas'),
+      pushButton(ids, FEATURE_KEYS.LEFT, 'Gauche'),
+      pushButton(ids, FEATURE_KEYS.RIGHT, 'Droite'),
+      pushButton(ids, FEATURE_KEYS.SCREEN_OFF, 'Éteindre l’écran'),
+      pushButton(ids, FEATURE_KEYS.SCREEN_ON, 'Allumer l’écran'),
       textFeature(ids, FEATURE_KEYS.TOAST, 'Message TV', {
         readOnly: false,
       }),
@@ -123,14 +143,12 @@ export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
         type: 'select',
         supportedOptions: [],
       }),
-      textFeature(ids, FEATURE_KEYS.CURRENT_APP, 'Application courante'),
       textFeature(ids, FEATURE_KEYS.LAUNCH_APP, 'Lancer une application', {
         readOnly: false,
         feedback: false,
         type: 'select',
         supportedOptions: [],
       }),
-      textFeature(ids, FEATURE_KEYS.INPUT_STATUS, 'État de la source'),
     ],
   };
 }
@@ -151,7 +169,9 @@ export function buildDiscoveredTelevisionDevice(gladys, television, config = {})
       tv_udn: television.udn,
       tv_mac: sameConfiguredTv ? config.tv_mac : '',
     },
-    { stableId },
+    {
+      stableId,
+    },
   );
 
   if (television.model) {
@@ -199,9 +219,7 @@ export async function setTelevisionValue({ gladys, client, config, feature, valu
           );
         }
 
-        logger.info(
-          'LG webOS Wake-on-LAN: sending 1 magic packet to 192.168.1.255:9',
-        );
+        logger.info('LG webOS Wake-on-LAN: sending 1 magic packet to 192.168.1.255:9');
 
         return Promise.all([
           gladys.wakeOnLan(config.tv_mac, {
@@ -246,6 +264,33 @@ export async function setTelevisionValue({ gladys, client, config, feature, valu
 
     case FEATURE_KEYS.CHANNEL_DOWN:
       return client.request(WEBOS_COMMANDS.CHANNEL_DOWN);
+
+    case FEATURE_KEYS.HOME:
+      return client.sendButton('HOME');
+
+    case FEATURE_KEYS.BACK:
+      return client.sendButton('BACK');
+
+    case FEATURE_KEYS.ENTER:
+      return client.sendButton('ENTER');
+
+    case FEATURE_KEYS.UP:
+      return client.sendButton('UP');
+
+    case FEATURE_KEYS.DOWN:
+      return client.sendButton('DOWN');
+
+    case FEATURE_KEYS.LEFT:
+      return client.sendButton('LEFT');
+
+    case FEATURE_KEYS.RIGHT:
+      return client.sendButton('RIGHT');
+
+    case FEATURE_KEYS.SCREEN_OFF:
+      return client.request(WEBOS_COMMANDS.SCREEN_OFF);
+
+    case FEATURE_KEYS.SCREEN_ON:
+      return client.request(WEBOS_COMMANDS.SCREEN_ON);
 
     case FEATURE_KEYS.TOAST: {
       const message = typeof value === 'object' && value?.text !== undefined ? value.text : value;
@@ -350,9 +395,7 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
   }
 
   if (applications.length) {
-    const launchAppFeature = device.features.find(
-      (feature) => feature.external_id.split(':').at(-1) === FEATURE_KEYS.LAUNCH_APP,
-    );
+    const launchAppFeature = byKey.get(FEATURE_KEYS.LAUNCH_APP);
 
     if (launchAppFeature) {
       launchAppFeature.supported_options = applications
@@ -388,9 +431,7 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
   }
 
   if (inputs.length) {
-    const sourceFeature = device.features.find(
-      (feature) => feature.external_id.split(':').at(-1) === FEATURE_KEYS.SOURCE,
-    );
+    const sourceFeature = byKey.get(FEATURE_KEYS.SOURCE);
 
     if (sourceFeature) {
       sourceFeature.supported_options = inputs.map((input) => ({
@@ -423,7 +464,6 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
       const appId = String(payload.appId || payload.id || '');
 
       const application = applications.find((app) => app.id === appId);
-
       const input = inputs.find((candidate) => candidate.appId === appId);
 
       const title = application?.title || input?.label || appId || 'unknown';
@@ -434,33 +474,51 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
         }, payload=${JSON.stringify(payload)}`,
       );
 
-      const states = [];
-
-      if (appId) {
-        states.push({
-          device_feature_external_id: byKey.get(FEATURE_KEYS.CURRENT_APP).external_id,
-          text: title,
-        });
+      if (!input) {
+        return;
       }
 
-      if (input) {
-        states.push(
-          {
-            device_feature_external_id: byKey.get(FEATURE_KEYS.SOURCE).external_id,
-            text: input.id,
-          },
-          {
-            device_feature_external_id: byKey.get(FEATURE_KEYS.INPUT_STATUS).external_id,
-            text: `${input.label} (${input.id}) — ${
-              input.connected ? 'connected' : 'disconnected'
-            }`,
-          },
-        );
+      const sourceFeature = byKey.get(FEATURE_KEYS.SOURCE);
+
+      if (!sourceFeature) {
+        return;
       }
 
-      if (states.length) {
-        await gladys.publishStates(states);
+      await gladys.publishStates([
+        {
+          device_feature_external_id: sourceFeature.external_id,
+          text: input.id,
+        },
+      ]);
+    }),
+  );
+
+  cleanups.push(
+    await client.subscribe(WEBOS_COMMANDS.GET_CURRENT_CHANNEL, async (payload) => {
+      logger.info(`LG webOS current channel: ${JSON.stringify(payload)}`);
+
+      const channelNumber = String(payload.channelNumber || payload.channelId || '').trim();
+
+      const channelName = String(payload.channelName || payload.channelNameShort || '').trim();
+
+      if (!channelNumber && !channelName) {
+        return;
       }
+
+      const currentChannelFeature = byKey.get(FEATURE_KEYS.CURRENT_CHANNEL);
+
+      if (!currentChannelFeature) {
+        return;
+      }
+
+      const label = [channelNumber, channelName].filter(Boolean).join(' - ');
+
+      await gladys.publishStates([
+        {
+          device_feature_external_id: currentChannelFeature.external_id,
+          text: label,
+        },
+      ]);
     }),
   );
 

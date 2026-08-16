@@ -42,6 +42,7 @@ test('builds a discovered TV using the stable UDN', () => {
 
   assert.equal(device.external_id, 'ext:test:lg-webos:abc-123');
   assert.equal(device.model, 'OLED55C3');
+
   assert.deepEqual(paramsToObject(device), {
     ip: '192.168.1.40',
     udn: 'uuid:ABC-123',
@@ -93,6 +94,7 @@ test('discovery keeps its original platform id after a MAC is added', () => {
       tv_name: 'TV salon',
     },
   );
+
   assert.equal(device.external_id, 'ext:test:lg-webos:abc-123');
 });
 
@@ -103,17 +105,30 @@ test('manual TV can be built without a MAC when it has an UDN', () => {
     tv_udn: 'uuid:ABC-123',
     tv_name: 'TV salon',
   });
+
   assert.equal(device.external_id, 'ext:test:lg-webos:abc-123');
 });
 
 test('dispatches writable television features', async () => {
   const fakeGladys = createFakeGladys();
   const requests = [];
+  const buttons = [];
 
   const client = {
     request: async (uri, payload) => {
       requests.push({ uri, payload });
-      return { returnValue: true };
+
+      return {
+        returnValue: true,
+      };
+    },
+
+    sendButton: async (button) => {
+      buttons.push(button);
+
+      return {
+        returnValue: true,
+      };
     },
   };
 
@@ -229,8 +244,66 @@ test('dispatches writable television features', async () => {
     gladys: fakeGladys,
     client,
     config,
+    feature: feature(FEATURE_KEYS.HOME),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.BACK),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.ENTER),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.UP),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.DOWN),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.LEFT),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.RIGHT),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
     feature: feature(FEATURE_KEYS.TOAST),
-    value: { text: 'Bonjour' },
+    value: {
+      text: 'Bonjour',
+    },
   });
 
   await setTelevisionValue({
@@ -256,11 +329,15 @@ test('dispatches writable television features', async () => {
     },
     {
       uri: WEBOS_COMMANDS.SET_VOLUME,
-      payload: { volume: 42 },
+      payload: {
+        volume: 42,
+      },
     },
     {
       uri: WEBOS_COMMANDS.SET_MUTE,
-      payload: { mute: true },
+      payload: {
+        mute: true,
+      },
     },
     {
       uri: WEBOS_COMMANDS.VOLUME_UP,
@@ -292,24 +369,34 @@ test('dispatches writable television features', async () => {
     },
     {
       uri: WEBOS_COMMANDS.CREATE_TOAST,
-      payload: { message: 'Bonjour' },
+      payload: {
+        message: 'Bonjour',
+      },
     },
     {
       uri: WEBOS_COMMANDS.SWITCH_INPUT,
-      payload: { inputId: 'HDMI_2' },
+      payload: {
+        inputId: 'HDMI_2',
+      },
     },
     {
       uri: WEBOS_COMMANDS.LAUNCH_APP,
-      payload: { id: 'netflix' },
+      payload: {
+        id: 'netflix',
+      },
     },
   ]);
+
+  assert.deepEqual(buttons, ['HOME', 'BACK', 'ENTER', 'UP', 'DOWN', 'LEFT', 'RIGHT']);
 });
 
 test('rejects invalid writable television feature values', async () => {
   const fakeGladys = createFakeGladys();
 
   const client = {
-    request: async () => ({ returnValue: true }),
+    request: async () => ({
+      returnValue: true,
+    }),
   };
 
   const feature = (key) => ({
@@ -499,6 +586,7 @@ test('publishes subscriptions, dynamic app options and cleanup', async () => {
 
     subscribe: async (uri, callback) => {
       callbacks.set(uri, callback);
+
       return () => cleaned.push(uri);
     },
   };
@@ -538,19 +626,20 @@ test('publishes subscriptions, dynamic app options and cleanup', async () => {
     appId: 'com.webos.app.hdmi2',
   });
 
+  await callbacks.get(WEBOS_COMMANDS.GET_CURRENT_CHANNEL)({
+    channelNumber: '1',
+    channelName: 'TF1',
+  });
+
   await callbacks.get(WEBOS_COMMANDS.GET_VOLUME)({
     volume: 12,
     muted: true,
   });
 
   assert.ok(fakeGladys.published.some((item) => item.state === 1));
-
   assert.ok(fakeGladys.published.some((item) => item.state === 0));
-
-  assert.ok(fakeGladys.published.some((item) => item.text === 'SAMSUNG'));
-
   assert.ok(fakeGladys.published.some((item) => item.text === 'HDMI_2'));
-
+  assert.ok(fakeGladys.published.some((item) => item.text === '1 - TF1'));
   assert.ok(fakeGladys.published.some((item) => item.state === 12));
 
   cleanup();
@@ -559,6 +648,7 @@ test('publishes subscriptions, dynamic app options and cleanup', async () => {
     cleaned.sort(),
     [
       WEBOS_COMMANDS.FOREGROUND_APP,
+      WEBOS_COMMANDS.GET_CURRENT_CHANNEL,
       WEBOS_COMMANDS.GET_POWER_STATE,
       WEBOS_COMMANDS.GET_VOLUME,
     ].sort(),
@@ -576,6 +666,7 @@ test('subscriptions tolerate application and input discovery failures', async ()
 
     subscribe: async (uri) => {
       subscriptions.push(uri);
+
       return () => {};
     },
   };
@@ -592,6 +683,7 @@ test('subscriptions tolerate application and input discovery failures', async ()
     subscriptions.sort(),
     [
       WEBOS_COMMANDS.FOREGROUND_APP,
+      WEBOS_COMMANDS.GET_CURRENT_CHANNEL,
       WEBOS_COMMANDS.GET_POWER_STATE,
       WEBOS_COMMANDS.GET_VOLUME,
     ].sort(),
@@ -674,6 +766,7 @@ test('discovers a TV from raw SSDP string headers', async () => {
   const fakeGladys = {
     scanNetwork: async (type, options) => {
       assert.equal(type, 'ssdp');
+
       assert.deepEqual(options, {
         st: WEBOS_SSDP_ST,
         timeoutSeconds: 7,
@@ -696,6 +789,7 @@ test('discovers a TV from raw SSDP string headers', async () => {
 
   const televisions = await discoverWebOsTelevisions(fakeGladys, {
     timeoutSeconds: 7,
+
     fetchImpl: async () => ({
       ok: true,
       text: async () => `
@@ -928,8 +1022,14 @@ test('covers remaining writable value normalization branches', async () => {
 
   const client = {
     request: async (uri, payload) => {
-      requests.push({ uri, payload });
-      return { returnValue: true };
+      requests.push({
+        uri,
+        payload,
+      });
+
+      return {
+        returnValue: true,
+      };
     },
   };
 
@@ -972,19 +1072,27 @@ test('covers remaining writable value normalization branches', async () => {
   assert.deepEqual(requests, [
     {
       uri: WEBOS_COMMANDS.SET_MUTE,
-      payload: { mute: false },
+      payload: {
+        mute: false,
+      },
     },
     {
       uri: WEBOS_COMMANDS.CREATE_TOAST,
-      payload: { message: 'Message direct' },
+      payload: {
+        message: 'Message direct',
+      },
     },
     {
       uri: WEBOS_COMMANDS.SWITCH_INPUT,
-      payload: { inputId: 'HDMI_1' },
+      payload: {
+        inputId: 'HDMI_1',
+      },
     },
     {
       uri: WEBOS_COMMANDS.LAUNCH_APP,
-      payload: { id: 'youtube.leanback.v4' },
+      payload: {
+        id: 'youtube.leanback.v4',
+      },
     },
   ]);
 
@@ -1038,7 +1146,6 @@ test('returns empty normalized lists when webOS omits apps or devices', async ()
   };
 
   assert.deepEqual(await getInstalledApplications(client), []);
-
   assert.deepEqual(await getExternalInputs(client), []);
 });
 
@@ -1078,6 +1185,7 @@ test('subscription reports screen-off as on and covers foreground app fallbacks'
 
     subscribe: async (uri, callback) => {
       callbacks.set(uri, callback);
+
       return () => {};
     },
   };
@@ -1094,31 +1202,40 @@ test('subscription reports screen-off as on and covers foreground app fallbacks'
 
   assert.equal(fakeGladys.published.at(-1).state, 1);
 
+  await callbacks.get(WEBOS_COMMANDS.GET_CURRENT_CHANNEL)({
+    channelNumber: '2',
+    channelName: 'France 2',
+  });
+
+  assert.equal(fakeGladys.published.at(-1).text, '2 - France 2');
+
+  const countBeforeNetflix = fakeGladys.published.length;
+
   await callbacks.get(WEBOS_COMMANDS.FOREGROUND_APP)({
     appId: 'netflix',
   });
 
-  assert.equal(fakeGladys.published.at(-1).text, 'Netflix');
+  assert.equal(fakeGladys.published.length, countBeforeNetflix);
 
   await callbacks.get(WEBOS_COMMANDS.FOREGROUND_APP)({
     id: 'com.webos.app.hdmi3',
   });
 
-  assert.ok(
-    fakeGladys.published.some((item) => item.text === 'Playstation 5 (HDMI_3) — disconnected'),
-  );
+  assert.equal(fakeGladys.published.at(-1).text, 'HDMI_3');
+
+  const countBeforeUnknown = fakeGladys.published.length;
 
   await callbacks.get(WEBOS_COMMANDS.FOREGROUND_APP)({
     appId: 'unknown.app',
   });
 
-  assert.equal(fakeGladys.published.at(-1).text, 'unknown.app');
+  assert.equal(fakeGladys.published.length, countBeforeUnknown);
 
-  const count = fakeGladys.published.length;
+  const countBeforeEmpty = fakeGladys.published.length;
 
   await callbacks.get(WEBOS_COMMANDS.FOREGROUND_APP)({});
 
-  assert.equal(fakeGladys.published.length, count);
+  assert.equal(fakeGladys.published.length, countBeforeEmpty);
 });
 
 test('volume subscription covers partial and empty payloads', async () => {
@@ -1128,11 +1245,15 @@ test('volume subscription covers partial and empty payloads', async () => {
   const client = {
     request: async (uri) => {
       if (uri === WEBOS_COMMANDS.LIST_APPS) {
-        return { apps: [] };
+        return {
+          apps: [],
+        };
       }
 
       if (uri === WEBOS_COMMANDS.GET_EXTERNAL_INPUT_LIST) {
-        return { devices: [] };
+        return {
+          devices: [],
+        };
       }
 
       throw new Error(`Unexpected request ${uri}`);
@@ -1140,6 +1261,7 @@ test('volume subscription covers partial and empty payloads', async () => {
 
     subscribe: async (uri, callback) => {
       callbacks.set(uri, callback);
+
       return () => {};
     },
   };
@@ -1190,6 +1312,7 @@ test('startTelevisionSubscriptions returns a noop cleanup without a stable TV id
 
   assert.equal(typeof cleanup, 'function');
   assert.equal(subscribed, false);
+
   assert.doesNotThrow(() => cleanup());
 });
 
@@ -1199,11 +1322,15 @@ test('cleanup tolerates undefined subscription cleanup functions', async () => {
   const client = {
     request: async (uri) => {
       if (uri === WEBOS_COMMANDS.LIST_APPS) {
-        return { apps: [] };
+        return {
+          apps: [],
+        };
       }
 
       if (uri === WEBOS_COMMANDS.GET_EXTERNAL_INPUT_LIST) {
-        return { devices: [] };
+        return {
+          devices: [],
+        };
       }
 
       throw new Error(`Unexpected request ${uri}`);
@@ -1242,7 +1369,9 @@ test('subscription supports an external input without an appId', async () => {
   const client = {
     request: async (uri) => {
       if (uri === WEBOS_COMMANDS.LIST_APPS) {
-        return { apps: [] };
+        return {
+          apps: [],
+        };
       }
 
       if (uri === WEBOS_COMMANDS.GET_EXTERNAL_INPUT_LIST) {
@@ -1262,6 +1391,7 @@ test('subscription supports an external input without an appId', async () => {
 
     subscribe: async (uri, callback) => {
       callbacks.set(uri, callback);
+
       return () => {};
     },
   };
@@ -1272,5 +1402,310 @@ test('subscription supports an external input without an appId', async () => {
     tv_udn: 'uuid:test',
   });
 
-  assert.equal(callbacks.size, 3);
+  assert.equal(callbacks.size, 4);
+});
+
+test('dispatches writable television features', async () => {
+  const fakeGladys = createFakeGladys();
+  const requests = [];
+  const buttons = [];
+
+  const client = {
+    request: async (uri, payload) => {
+      requests.push({ uri, payload });
+
+      return {
+        returnValue: true,
+      };
+    },
+
+    sendButton: async (button) => {
+      buttons.push(button);
+
+      return {
+        returnValue: true,
+      };
+    },
+  };
+
+  const config = {
+    tv_ip: '192.168.1.71',
+    tv_mac: '64:e4:a5:b4:88:74',
+  };
+
+  const feature = (key) => ({
+    external_id: `lg-webos:test:${key}`,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client: null,
+    config,
+    feature: feature(FEATURE_KEYS.POWER),
+    value: 1,
+  });
+
+  assert.deepEqual(fakeGladys.wakeOnLanCalls, [
+    {
+      mac: '64:e4:a5:b4:88:74',
+      options: {
+        address: '192.168.1.255',
+        port: 9,
+        sourcePort: 0,
+      },
+    },
+  ]);
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.POWER),
+    value: 0,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.VOLUME),
+    value: 42.4,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.MUTE),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.VOLUME_UP),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.VOLUME_DOWN),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.PLAY),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.PAUSE),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.STOP),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.CHANNEL_UP),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.CHANNEL_DOWN),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.HOME),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.BACK),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.ENTER),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.UP),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.DOWN),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.LEFT),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.RIGHT),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.SCREEN_OFF),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.SCREEN_ON),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.TOAST),
+    value: {
+      text: 'Bonjour',
+    },
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.SOURCE),
+    value: 'HDMI_2',
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.LAUNCH_APP),
+    value: 'netflix',
+  });
+
+  assert.deepEqual(requests, [
+    {
+      uri: WEBOS_COMMANDS.TURN_OFF,
+      payload: undefined,
+    },
+    {
+      uri: WEBOS_COMMANDS.SET_VOLUME,
+      payload: {
+        volume: 42,
+      },
+    },
+    {
+      uri: WEBOS_COMMANDS.SET_MUTE,
+      payload: {
+        mute: true,
+      },
+    },
+    {
+      uri: WEBOS_COMMANDS.VOLUME_UP,
+      payload: undefined,
+    },
+    {
+      uri: WEBOS_COMMANDS.VOLUME_DOWN,
+      payload: undefined,
+    },
+    {
+      uri: WEBOS_COMMANDS.PLAY,
+      payload: undefined,
+    },
+    {
+      uri: WEBOS_COMMANDS.PAUSE,
+      payload: undefined,
+    },
+    {
+      uri: WEBOS_COMMANDS.STOP,
+      payload: undefined,
+    },
+    {
+      uri: WEBOS_COMMANDS.CHANNEL_UP,
+      payload: undefined,
+    },
+    {
+      uri: WEBOS_COMMANDS.CHANNEL_DOWN,
+      payload: undefined,
+    },
+    {
+      uri: WEBOS_COMMANDS.SCREEN_OFF,
+      payload: undefined,
+    },
+    {
+      uri: WEBOS_COMMANDS.SCREEN_ON,
+      payload: undefined,
+    },
+    {
+      uri: WEBOS_COMMANDS.CREATE_TOAST,
+      payload: {
+        message: 'Bonjour',
+      },
+    },
+    {
+      uri: WEBOS_COMMANDS.SWITCH_INPUT,
+      payload: {
+        inputId: 'HDMI_2',
+      },
+    },
+    {
+      uri: WEBOS_COMMANDS.LAUNCH_APP,
+      payload: {
+        id: 'netflix',
+      },
+    },
+  ]);
+
+  assert.deepEqual(buttons, ['HOME', 'BACK', 'ENTER', 'UP', 'DOWN', 'LEFT', 'RIGHT']);
 });
