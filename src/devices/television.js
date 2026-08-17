@@ -27,7 +27,6 @@ export const FEATURE_KEYS = Object.freeze({
   DOWN: 'down',
   LEFT: 'left',
   RIGHT: 'right',
-  SCREEN: 'screen',
   TOAST: 'toast',
   SOURCE: 'source',
   LAUNCH_APP: 'launch-app',
@@ -172,17 +171,6 @@ export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
       textFeature(ids, FEATURE_KEYS.CURRENT_CHANNEL, 'Chaîne courante'),
       textFeature(ids, FEATURE_KEYS.CURRENT_APP, 'Application courante'),
       ...REMOTE_KEYS.map((remoteKey) => remoteButton(ids, remoteKey)),
-      {
-        name: 'Écran',
-        external_id: ids.feature(FEATURE_KEYS.SCREEN),
-        category: 'switch',
-        type: 'binary',
-        min: 0,
-        max: 1,
-        read_only: false,
-        has_feedback: true,
-        keep_history: true,
-      },
       textFeature(ids, FEATURE_KEYS.TOAST, 'Message TV', {
         readOnly: false,
       }),
@@ -249,14 +237,9 @@ export async function setTelevisionValue({ gladys, client, config, feature, valu
   const key = feature.external_id.split(':').at(-1);
   const remoteKey = REMOTE_KEYS.find((candidate) => candidate.key === key);
 
-  logger.info(`LG webOS dispatch: featureKey=${key}, value=${JSON.stringify(value)}`);
-
   if (remoteKey) {
-    logger.info(`LG webOS remote dispatch: featureKey=${key}, button=${remoteKey.button}`);
     return client.sendButton(remoteKey.button);
   }
-
-  logger.info(`LG webOS SSAP dispatch: featureKey=${key}`);
 
   switch (key) {
     case FEATURE_KEYS.POWER:
@@ -323,11 +306,6 @@ export async function setTelevisionValue({ gladys, client, config, feature, valu
 
     case FEATURE_KEYS.CHANNEL_DOWN:
       return client.request(WEBOS_COMMANDS.CHANNEL_DOWN);
-
-    case FEATURE_KEYS.SCREEN:
-      return client.request(value ? WEBOS_COMMANDS.SCREEN_ON : WEBOS_COMMANDS.SCREEN_OFF, {
-        standbyMode: 'active',
-      });
 
     case FEATURE_KEYS.TOAST: {
       const message = typeof value === 'object' && value?.text !== undefined ? value.text : value;
@@ -497,19 +475,12 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
         processing.includes('suspend');
 
       const isOn = !isPoweringOff && (state === 'active' || state === 'screen off');
-      const isScreenOn = isOn && state !== 'screen off';
-
       const powerFeature = byType.get(FEATURE_KEYS.POWER);
 
       if (powerFeature) {
         await gladys.publishState(powerFeature.external_id, isOn ? 1 : 0);
       }
 
-      const screenFeature = byKey.get(FEATURE_KEYS.SCREEN);
-
-      if (screenFeature) {
-        await gladys.publishState(screenFeature.external_id, isScreenOn ? 1 : 0);
-      }
     }),
   );
 

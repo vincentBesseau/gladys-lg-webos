@@ -110,16 +110,11 @@ export class WebOsClient extends EventEmitter {
       .trim()
       .toUpperCase();
 
-    console.log(`[LG DEBUG] sendButton called: ${name}`);
-
     if (!/^[A-Z0-9_]+$/.test(name)) {
       throw new Error(`Invalid LG webOS remote button: ${button}`);
     }
-
-    console.log(`[LG DEBUG] requesting pointer socket for: ${name}`);
     const payload = await this.request(WEBOS_COMMANDS.GET_POINTER_INPUT_SOCKET);
     const socketPath = String(payload?.socketPath || '').trim();
-    console.log(`[LG DEBUG] pointer socket path for ${name}: ${socketPath || '<empty>'}`);
 
     if (!socketPath) {
       throw new Error('LG webOS did not return a pointer input socket.');
@@ -155,10 +150,7 @@ export class WebOsClient extends EventEmitter {
 
       socket.addEventListener('open', () => {
         try {
-          console.log(`[LG DEBUG] pointer socket OPEN for: ${name}`);
-          console.log(`[LG DEBUG] sending pointer button: ${name}`);
           socket.send(`type:button\nname:${name}\n\n`);
-          console.log(`[LG DEBUG] pointer button sent: ${name}`);
           finish();
         } catch (error) {
           finish(error);
@@ -205,8 +197,6 @@ export class WebOsClient extends EventEmitter {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
-
-        console.log(`[LG DEBUG] request TIMEOUT id=${id} uri=${uri || type}`);
         reject(new Error(`LG webOS request timed out: ${uri || type}`));
       }, this.timeout);
 
@@ -216,10 +206,6 @@ export class WebOsClient extends EventEmitter {
         timer,
         subscription: false,
       });
-
-      console.log(
-        `[LG DEBUG] request SEND id=${id} type=${type} uri=${uri || '<none>'} payload=${JSON.stringify(payload ?? {})}`,
-      );
       this.socket.send(JSON.stringify(message));
     });
   }
@@ -320,12 +306,6 @@ export class WebOsClient extends EventEmitter {
 
     const pending = this.pending.get(message.id);
 
-    console.log(
-      `[LG DEBUG] response RECV id=${message.id || '<none>'} type=${message.type || '<none>'} pending=${Boolean(
-        pending,
-      )} payload=${JSON.stringify(message.payload ?? {})} error=${message.error || ''}`,
-    );
-
     if (!pending) {
       return;
     }
@@ -335,12 +315,6 @@ export class WebOsClient extends EventEmitter {
         clearTimeout(pending.timer);
 
         this.pending.delete(message.id);
-
-        console.log(
-          `[LG DEBUG] request REJECT id=${message.id} error=${
-            message.error || message.payload?.errorText || 'LG webOS request failed.'
-          }`,
-        );
         pending.reject(
           new Error(message.error || message.payload?.errorText || 'LG webOS request failed.'),
         );
@@ -360,8 +334,6 @@ export class WebOsClient extends EventEmitter {
     clearTimeout(pending.timer);
 
     this.pending.delete(message.id);
-
-    console.log(`[LG DEBUG] request RESOLVE id=${message.id}`);
     pending.resolve(message.payload ?? {});
   }
 }

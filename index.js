@@ -145,11 +145,6 @@ async function scanTelevisions() {
 }
 
 async function disconnectTv(runtime) {
-  logger.info(
-    `LG webOS power debug: disconnectTv called, hasClient=${Boolean(
-      runtime.client,
-    )}, wakingUp=${runtime.wakingUp}`,
-  );
 
   if (!runtime.wakingUp) {
     await publishPowerState(gladys, runtime.config, 0).catch(() => {});
@@ -166,7 +161,7 @@ async function disconnectTv(runtime) {
   await updateConnectionStatus().catch(() => {});
 }
 
-async function connectTv(runtime) {
+async function connectTv(runtime, { timeout = 15000 } = {}) {
   await disconnectTv(runtime);
 
   runtime.intentionalDisconnect = false;
@@ -181,6 +176,7 @@ async function connectTv(runtime) {
     ip: runtime.config.tv_ip,
     clientKey: runtime.config.client_key,
     mode: runtime.config.connection_mode,
+    timeout,
   });
 
   nextClient.on('pairing', () => {
@@ -216,12 +212,6 @@ async function connectTv(runtime) {
 
   nextClient.on('close', () => {
     logger.info('LG webOS connection closed: publishing Power OFF.');
-
-    logger.info(
-      `LG webOS power debug: socket close, clientIsNext=${
-        runtime.client === nextClient
-      }, wakingUp=${runtime.wakingUp}`,
-    );
 
     const intentionalDisconnect = runtime.intentionalDisconnect;
 
@@ -276,17 +266,9 @@ async function reconnectTvAfterWake(runtime) {
     try {
       logger.info(`LG webOS reconnect attempt ${attempt}/${maxAttempts} after Wake-on-LAN`);
 
-      logger.info(
-        `LG webOS power debug: reconnect attempt ${attempt}, clientBefore=${Boolean(
-          runtime.client,
-        )}, wakingUp=${runtime.wakingUp}`,
-      );
-
       await connectTv(runtime);
 
       runtime.wakingUp = false;
-
-      logger.info('LG webOS power debug: WebSocket reconnected, setting wakingUp=false');
 
       await publishPowerState(gladys, runtime.config, 1).catch(() => {});
 
@@ -435,16 +417,7 @@ gladys.onSetValue(async (device, feature, value) => {
     )}, clientConnected=${Boolean(runtime.client)}`,
   );
 
-  logger.info(
-    `LG webOS power debug: featureKey=${feature.external_id
-      .split(':')
-      .at(-1)}, rawValue=${JSON.stringify(value)}, numericValue=${Number(
-      value,
-    )}, hasClient=${Boolean(runtime.client)}, wakingUp=${runtime.wakingUp}`,
-  );
-
   if (feature.external_id.endsWith(`:${FEATURE_KEYS.POWER}`) && Number(value) === 1) {
-    logger.info('LG webOS power debug: entering ON Wake-on-LAN branch');
 
     const wasConnected = Boolean(runtime.client);
 
@@ -462,8 +435,6 @@ gladys.onSetValue(async (device, feature, value) => {
       });
 
       await publishPowerState(gladys, runtime.config, 1).catch(() => {});
-
-      logger.info('LG webOS power debug: optimistic Power=1 published after Wake-on-LAN');
     } catch (error) {
       runtime.wakingUp = false;
 
