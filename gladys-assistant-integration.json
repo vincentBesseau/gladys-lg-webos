@@ -7,8 +7,8 @@
     "fr": "Contrôlez localement une télévision LG webOS depuis Gladys Assistant.",
     "de": "Steuern Sie einen LG webOS Fernseher lokal über Gladys Assistant."
   },
-  "version": "2.1.3",
-  "docker_image": "ghcr.io/vincentbesseau/gladys-lg-webos:2.1.3",
+  "version": "2.1.4",
+  "docker_image": "ghcr.io/vincentbesseau/gladys-lg-webos:2.1.4",
   "gladys_version": ">=4.86.1",
   "categories": [
     "multimedia"
