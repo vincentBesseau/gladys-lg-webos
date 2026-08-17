@@ -8,4 +8,5 @@ test('includes an existing client key when reconnecting', () => {
   assert.equal(payload.pairingType, 'PROMPT');
   assert.ok(payload.manifest.permissions.includes('WRITE_NOTIFICATION_TOAST'));
   assert.ok(payload.manifest.permissions.includes('CONTROL_POWER'));
+  assert.ok(payload.manifest.permissions.includes('CONTROL_MOUSE_AND_KEYBOARD'));
 });

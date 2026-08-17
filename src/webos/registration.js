@@ -32,6 +32,7 @@ export function buildRegistrationPayload(clientKey) {
         'CLOSE',
         'CONTROL_AUDIO',
         'CONTROL_INPUT_MEDIA_PLAYBACK',
+        'CONTROL_MOUSE_AND_KEYBOARD',
         'CONTROL_INPUT_TV',
         'CONTROL_POWER',
         'READ_APP_STATUS',
