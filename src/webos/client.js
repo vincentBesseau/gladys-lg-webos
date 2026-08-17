@@ -206,6 +206,7 @@ export class WebOsClient extends EventEmitter {
       const timer = setTimeout(() => {
         this.pending.delete(id);
 
+        console.log(`[LG DEBUG] request TIMEOUT id=${id} uri=${uri || type}`);
         reject(new Error(`LG webOS request timed out: ${uri || type}`));
       }, this.timeout);
 
@@ -216,6 +217,9 @@ export class WebOsClient extends EventEmitter {
         subscription: false,
       });
 
+      console.log(
+        `[LG DEBUG] request SEND id=${id} type=${type} uri=${uri || '<none>'} payload=${JSON.stringify(payload ?? {})}`,
+      );
       this.socket.send(JSON.stringify(message));
     });
   }
@@ -316,6 +320,12 @@ export class WebOsClient extends EventEmitter {
 
     const pending = this.pending.get(message.id);
 
+    console.log(
+      `[LG DEBUG] response RECV id=${message.id || '<none>'} type=${message.type || '<none>'} pending=${Boolean(
+        pending,
+      )} payload=${JSON.stringify(message.payload ?? {})} error=${message.error || ''}`,
+    );
+
     if (!pending) {
       return;
     }
@@ -326,6 +336,11 @@ export class WebOsClient extends EventEmitter {
 
         this.pending.delete(message.id);
 
+        console.log(
+          `[LG DEBUG] request REJECT id=${message.id} error=${
+            message.error || message.payload?.errorText || 'LG webOS request failed.'
+          }`,
+        );
         pending.reject(
           new Error(message.error || message.payload?.errorText || 'LG webOS request failed.'),
         );
@@ -346,6 +361,7 @@ export class WebOsClient extends EventEmitter {
 
     this.pending.delete(message.id);
 
+    console.log(`[LG DEBUG] request RESOLVE id=${message.id}`);
     pending.resolve(message.payload ?? {});
   }
 }
