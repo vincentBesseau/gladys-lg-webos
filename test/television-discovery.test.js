@@ -109,6 +109,34 @@ test('manual TV can be built without a MAC when it has an UDN', () => {
   assert.equal(device.external_id, 'ext:test:lg-webos:abc-123');
 });
 
+test('uses the TV subnet broadcast address for Wake-on-LAN', async () => {
+  const fakeGladys = createFakeGladys();
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client: null,
+    config: {
+      tv_ip: '192.168.100.132',
+      tv_mac: 'AA:BB:CC:DD:EE:FF',
+    },
+    feature: {
+      external_id: `lg-webos:test:${FEATURE_KEYS.POWER}`,
+    },
+    value: 1,
+  });
+
+  assert.deepEqual(fakeGladys.wakeOnLanCalls, [
+    {
+      mac: 'AA:BB:CC:DD:EE:FF',
+      options: {
+        address: '192.168.100.255',
+        port: 9,
+        sourcePort: 0,
+      },
+    },
+  ]);
+});
+
 test('dispatches writable television features', async () => {
   const fakeGladys = createFakeGladys();
   const requests = [];

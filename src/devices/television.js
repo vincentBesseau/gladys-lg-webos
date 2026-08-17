@@ -64,6 +64,16 @@ function stablePlatformId(value) {
     .replace(/[^a-z0-9_-]/g, '');
 }
 
+function getBroadcastAddress(ip) {
+  const parts = String(ip || '').split('.');
+
+  if (parts.length !== 4) {
+    return '255.255.255.255';
+  }
+
+  return `${parts[0]}.${parts[1]}.${parts[2]}.255`;
+}
+
 export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
   const hardwareId = stableId || config.tv_platform_id || config.tv_udn || config.tv_mac;
 
@@ -213,11 +223,12 @@ export async function setTelevisionValue({ gladys, client, config, feature, valu
           );
         }
 
-        logger.info('LG webOS Wake-on-LAN: sending 1 magic packet to 192.168.1.255:9');
+        const broadcastAddress = getBroadcastAddress(config.tv_ip);
+        logger.info(`LG webOS Wake-on-LAN: sending 1 magic packet to ${broadcastAddress}:9`);
 
         return Promise.all([
           gladys.wakeOnLan(config.tv_mac, {
-            address: '192.168.1.255',
+            address: broadcastAddress,
             port: 9,
             sourcePort: 0,
           }),
