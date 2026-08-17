@@ -110,12 +110,16 @@ export class WebOsClient extends EventEmitter {
       .trim()
       .toUpperCase();
 
+    console.log(`[LG DEBUG] sendButton called: ${name}`);
+
     if (!/^[A-Z0-9_]+$/.test(name)) {
       throw new Error(`Invalid LG webOS remote button: ${button}`);
     }
 
+    console.log(`[LG DEBUG] requesting pointer socket for: ${name}`);
     const payload = await this.request(WEBOS_COMMANDS.GET_POINTER_INPUT_SOCKET);
     const socketPath = String(payload?.socketPath || '').trim();
+    console.log(`[LG DEBUG] pointer socket path for ${name}: ${socketPath || '<empty>'}`);
 
     if (!socketPath) {
       throw new Error('LG webOS did not return a pointer input socket.');
@@ -151,7 +155,10 @@ export class WebOsClient extends EventEmitter {
 
       socket.addEventListener('open', () => {
         try {
+          console.log(`[LG DEBUG] pointer socket OPEN for: ${name}`);
+          console.log(`[LG DEBUG] sending pointer button: ${name}`);
           socket.send(`type:button\nname:${name}\n\n`);
+          console.log(`[LG DEBUG] pointer button sent: ${name}`);
           finish();
         } catch (error) {
           finish(error);

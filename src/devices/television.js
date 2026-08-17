@@ -249,9 +249,14 @@ export async function setTelevisionValue({ gladys, client, config, feature, valu
   const key = feature.external_id.split(':').at(-1);
   const remoteKey = REMOTE_KEYS.find((candidate) => candidate.key === key);
 
+  logger.info(`LG webOS dispatch: featureKey=${key}, value=${JSON.stringify(value)}`);
+
   if (remoteKey) {
+    logger.info(`LG webOS remote dispatch: featureKey=${key}, button=${remoteKey.button}`);
     return client.sendButton(remoteKey.button);
   }
+
+  logger.info(`LG webOS SSAP dispatch: featureKey=${key}`);
 
   switch (key) {
     case FEATURE_KEYS.POWER:
