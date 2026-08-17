@@ -494,6 +494,55 @@ gladys.onSetValue(async (device, feature, value) => {
   });
 });
 
+async function rePairTv(runtime) {
+  const previousClientKey = runtime.config.client_key;
+  const tvLabel = runtime.config.tv_name || runtime.config.tv_ip;
+
+  logger.info(`LG webOS re-pairing requested for ${tvLabel}`);
+
+  runtime.config = normalizeConfig({
+    ...runtime.config,
+    client_key: '',
+  });
+
+  try {
+    // Give the user enough time to accept the authorization prompt on this TV.
+    await connectTv(runtime, {
+      timeout: 60000,
+    });
+
+    if (!runtime.config.client_key) {
+      throw new Error('LG webOS pairing completed without receiving a client key.');
+    }
+
+    // The registered event already persists the key, but persist again here so the
+    // action only returns once the selected TV configuration is durably updated.
+    await persistRuntime(runtime);
+
+    logger.info(`LG webOS re-pairing succeeded for ${tvLabel}`);
+
+    return runtime.config.client_key;
+  } catch (error) {
+    logger.warn(`LG webOS re-pairing failed for ${tvLabel}`, error);
+
+    // Keep the previous authorization usable if the new pairing is cancelled or times out.
+    runtime.config = normalizeConfig({
+      ...runtime.config,
+      client_key: previousClientKey,
+    });
+
+    await persistRuntime(runtime).catch(() => {});
+
+    if (previousClientKey) {
+      await connectTv(runtime).catch((reconnectError) => {
+        logger.warn(`Unable to restore previous LG webOS connection for ${tvLabel}`, reconnectError);
+      });
+    }
+
+    throw error;
+  }
+}
+
 gladys.onAction('configure_tv', async (fields) => {
   if (!fields.device) {
     throw new Error('Select an LG webOS TV before saving its MAC address.');
@@ -528,6 +577,30 @@ gladys.onAction('configure_tv', async (fields) => {
     en: `${runtime.config.tv_name} configuration saved.`,
     fr: `Configuration de ${runtime.config.tv_name} enregistrée.`,
     de: `Konfiguration von ${runtime.config.tv_name} gespeichert.`,
+  };
+});
+
+gladys.onAction('re_pair_tv', async (fields) => {
+  if (!fields.device) {
+    throw new Error('Select an LG webOS TV to re-pair.');
+  }
+
+  const runtime = getRuntimeForDevice({
+    external_id: fields.device,
+  });
+
+  if (!runtime?.config?.tv_ip) {
+    throw new Error('Unable to find the selected LG webOS TV.');
+  }
+
+  const tvLabel = runtime.config.tv_name || runtime.config.tv_ip;
+
+  await rePairTv(runtime);
+
+  return {
+    en: `${tvLabel} paired successfully.`,
+    fr: `${tvLabel} réappairée avec succès.`,
+    de: `${tvLabel} wurde erfolgreich neu gekoppelt.`,
   };
 });
 

@@ -116,6 +116,33 @@
       ]
     },
     {
+      "key": "re_pair_tv",
+      "label": {
+        "en": "Re-pair a TV",
+        "fr": "Réappairer une TV",
+        "de": "Fernseher neu koppeln"
+      },
+      "description": {
+        "en": "Select the LG webOS TV that should request a new authorization. Other TVs are not affected.",
+        "fr": "Sélectionnez la TV LG webOS qui doit redemander une autorisation. Les autres TV ne sont pas affectées.",
+        "de": "Wählen Sie den LG webOS Fernseher aus, der eine neue Autorisierung anfordern soll. Andere Fernseher sind davon nicht betroffen."
+      },
+      "timeout_seconds": 75,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "TV",
+            "fr": "TV",
+            "de": "Fernseher"
+          },
+          "required": true
+        }
+      ]
+    },
+    {
       "key": "test_connection",
       "label": {
         "en": "Test TV connections",
