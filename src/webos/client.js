@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { buildRegistrationPayload } from './registration.js';
+import { WEBOS_COMMANDS } from './commands.js';
 
 const OPEN = 1;
 
@@ -100,6 +101,73 @@ export class WebOsClient extends EventEmitter {
     this.socket.send(JSON.stringify(message));
 
     return () => this.pending.delete(id);
+  }
+
+  async sendButton(button) {
+    this.#assertReady();
+
+    const name = String(button ?? '')
+      .trim()
+      .toUpperCase();
+
+    if (!/^[A-Z0-9_]+$/.test(name)) {
+      throw new Error(`Invalid LG webOS remote button: ${button}`);
+    }
+
+    const payload = await this.request(WEBOS_COMMANDS.GET_POINTER_INPUT_SOCKET);
+    const socketPath = String(payload?.socketPath || '').trim();
+
+    if (!socketPath) {
+      throw new Error('LG webOS did not return a pointer input socket.');
+    }
+
+    return new Promise((resolve, reject) => {
+      const socket = new this.WebSocketImpl(socketPath);
+      let settled = false;
+      let timer;
+
+      const finish = (error) => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        clearTimeout(timer);
+
+        if (socket.readyState <= OPEN) {
+          socket.close();
+        }
+
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      };
+
+      timer = setTimeout(() => {
+        finish(new Error(`LG webOS pointer input socket timed out: ${socketPath}`));
+      }, this.timeout);
+
+      socket.addEventListener('open', () => {
+        try {
+          socket.send(`type:button\nname:${name}\n\n`);
+          finish();
+        } catch (error) {
+          finish(error);
+        }
+      });
+
+      socket.addEventListener('error', () => {
+        finish(new Error(`LG webOS pointer input WebSocket error: ${socketPath}`));
+      });
+
+      socket.addEventListener('close', () => {
+        if (!settled) {
+          finish(new Error('LG webOS pointer input socket closed before the button was sent.'));
+        }
+      });
+    });
   }
 
   #assertReady() {

@@ -10,18 +10,24 @@ export const FEATURE_KEYS = Object.freeze({
   PLAY: 'play',
   PAUSE: 'pause',
   STOP: 'stop',
+  PREVIOUS: 'previous',
+  NEXT: 'next',
+  RECORD: 'record',
+  REWIND: 'rewind',
+  FORWARD: 'forward',
   CHANNEL_UP: 'channel-up',
   CHANNEL_DOWN: 'channel-down',
   CURRENT_CHANNEL: 'current-channel',
+  CURRENT_APP: 'current-app',
   HOME: 'home',
+  MENU: 'menu',
   BACK: 'back',
   ENTER: 'enter',
   UP: 'up',
   DOWN: 'down',
   LEFT: 'left',
   RIGHT: 'right',
-  SCREEN_OFF: 'screen-off',
-  SCREEN_ON: 'screen-on',
+  SCREEN: 'screen',
   TOAST: 'toast',
   SOURCE: 'source',
   LAUNCH_APP: 'launch-app',
@@ -50,6 +56,32 @@ const pushButton = (ids, key, name) => ({
   external_id: ids.feature(key),
   category: 'television',
   type: key,
+  min: 0,
+  max: 1,
+  read_only: false,
+  has_feedback: false,
+  keep_history: false,
+});
+
+const REMOTE_KEYS = Object.freeze([
+  { key: FEATURE_KEYS.UP, name: 'Up', type: 'up', button: 'UP' },
+  { key: FEATURE_KEYS.DOWN, name: 'Down', type: 'down', button: 'DOWN' },
+  { key: FEATURE_KEYS.LEFT, name: 'Left', type: 'left', button: 'LEFT' },
+  { key: FEATURE_KEYS.RIGHT, name: 'Right', type: 'right', button: 'RIGHT' },
+  { key: FEATURE_KEYS.ENTER, name: 'OK', type: 'enter', button: 'ENTER' },
+  { key: FEATURE_KEYS.BACK, name: 'Back', type: 'return', button: 'BACK' },
+  { key: FEATURE_KEYS.HOME, name: 'Home', type: 'exit', button: 'HOME' },
+  { key: FEATURE_KEYS.MENU, name: 'Menu', type: 'menu', button: 'MENU' },
+  { key: FEATURE_KEYS.PREVIOUS, name: 'Previous', type: 'previous', button: 'GOTOPREV' },
+  { key: FEATURE_KEYS.NEXT, name: 'Next', type: 'next', button: 'GOTONEXT' },
+  { key: FEATURE_KEYS.RECORD, name: 'Record', type: 'record', button: 'RECORD' },
+]);
+
+const remoteButton = (ids, remoteKey) => ({
+  name: remoteKey.name,
+  external_id: ids.feature(remoteKey.key),
+  category: 'television',
+  type: remoteKey.type,
   min: 0,
   max: 1,
   read_only: false,
@@ -133,18 +165,24 @@ export function buildTelevisionDevice(gladys, config, { stableId } = {}) {
       pushButton(ids, FEATURE_KEYS.PLAY, 'Play'),
       pushButton(ids, FEATURE_KEYS.PAUSE, 'Pause'),
       pushButton(ids, FEATURE_KEYS.STOP, 'Stop'),
+      pushButton(ids, FEATURE_KEYS.REWIND, 'Rewind'),
+      pushButton(ids, FEATURE_KEYS.FORWARD, 'Fast forward'),
       pushButton(ids, FEATURE_KEYS.CHANNEL_UP, 'Channel +'),
       pushButton(ids, FEATURE_KEYS.CHANNEL_DOWN, 'Channel -'),
       textFeature(ids, FEATURE_KEYS.CURRENT_CHANNEL, 'Chaîne courante'),
-      /*pushButton(ids, FEATURE_KEYS.HOME, 'Home'),
-      pushButton(ids, FEATURE_KEYS.BACK, 'Back'),
-      pushButton(ids, FEATURE_KEYS.ENTER, 'OK'),
-      pushButton(ids, FEATURE_KEYS.UP, 'Haut'),
-      pushButton(ids, FEATURE_KEYS.DOWN, 'Bas'),
-      pushButton(ids, FEATURE_KEYS.LEFT, 'Gauche'),
-      pushButton(ids, FEATURE_KEYS.RIGHT, 'Droite'),*/
-      //pushButton(ids, FEATURE_KEYS.SCREEN_OFF, 'Éteindre l’écran'),
-      //pushButton(ids, FEATURE_KEYS.SCREEN_ON, 'Allumer l’écran'),
+      textFeature(ids, FEATURE_KEYS.CURRENT_APP, 'Application courante'),
+      ...REMOTE_KEYS.map((remoteKey) => remoteButton(ids, remoteKey)),
+      {
+        name: 'Écran',
+        external_id: ids.feature(FEATURE_KEYS.SCREEN),
+        category: 'switch',
+        type: 'binary',
+        min: 0,
+        max: 1,
+        read_only: false,
+        has_feedback: true,
+        keep_history: true,
+      },
       textFeature(ids, FEATURE_KEYS.TOAST, 'Message TV', {
         readOnly: false,
       }),
@@ -209,6 +247,11 @@ export function paramsToObject(device) {
 
 export async function setTelevisionValue({ gladys, client, config, feature, value }) {
   const key = feature.external_id.split(':').at(-1);
+  const remoteKey = REMOTE_KEYS.find((candidate) => candidate.key === key);
+
+  if (remoteKey) {
+    return client.sendButton(remoteKey.button);
+  }
 
   switch (key) {
     case FEATURE_KEYS.POWER:
@@ -264,38 +307,22 @@ export async function setTelevisionValue({ gladys, client, config, feature, valu
     case FEATURE_KEYS.STOP:
       return client.request(WEBOS_COMMANDS.STOP);
 
+    case FEATURE_KEYS.REWIND:
+      return client.request(WEBOS_COMMANDS.REWIND);
+
+    case FEATURE_KEYS.FORWARD:
+      return client.request(WEBOS_COMMANDS.FAST_FORWARD);
+
     case FEATURE_KEYS.CHANNEL_UP:
       return client.request(WEBOS_COMMANDS.CHANNEL_UP);
 
     case FEATURE_KEYS.CHANNEL_DOWN:
       return client.request(WEBOS_COMMANDS.CHANNEL_DOWN);
 
-    /*case FEATURE_KEYS.HOME:
-      return client.sendButton('HOME');
-
-    case FEATURE_KEYS.BACK:
-      return client.sendButton('BACK');
-
-    case FEATURE_KEYS.ENTER:
-      return client.sendButton('ENTER');
-
-    case FEATURE_KEYS.UP:
-      return client.sendButton('UP');
-
-    case FEATURE_KEYS.DOWN:
-      return client.sendButton('DOWN');
-
-    case FEATURE_KEYS.LEFT:
-      return client.sendButton('LEFT');
-
-    case FEATURE_KEYS.RIGHT:
-      return client.sendButton('RIGHT');*/
-
-    //case FEATURE_KEYS.SCREEN_OFF:
-    //  return client.request(WEBOS_COMMANDS.SCREEN_OFF);
-
-    //case FEATURE_KEYS.SCREEN_ON:
-    //  return client.request(WEBOS_COMMANDS.SCREEN_ON);
+    case FEATURE_KEYS.SCREEN:
+      return client.request(value ? WEBOS_COMMANDS.SCREEN_ON : WEBOS_COMMANDS.SCREEN_OFF, {
+        standbyMode: 'active',
+      });
 
     case FEATURE_KEYS.TOAST: {
       const message = typeof value === 'object' && value?.text !== undefined ? value.text : value;
@@ -465,8 +492,19 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
         processing.includes('suspend');
 
       const isOn = !isPoweringOff && (state === 'active' || state === 'screen off');
+      const isScreenOn = isOn && state !== 'screen off';
 
-      await gladys.publishState(byType.get(FEATURE_KEYS.POWER).external_id, isOn ? 1 : 0);
+      const powerFeature = byType.get(FEATURE_KEYS.POWER);
+
+      if (powerFeature) {
+        await gladys.publishState(powerFeature.external_id, isOn ? 1 : 0);
+      }
+
+      const screenFeature = byKey.get(FEATURE_KEYS.SCREEN);
+
+      if (screenFeature) {
+        await gladys.publishState(screenFeature.external_id, isScreenOn ? 1 : 0);
+      }
     }),
   );
 
@@ -484,6 +522,17 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
           input?.id || 'none'
         }, payload=${JSON.stringify(payload)}`,
       );
+
+      const currentAppFeature = byKey.get(FEATURE_KEYS.CURRENT_APP);
+
+      if (currentAppFeature) {
+        await gladys.publishStates([
+          {
+            device_feature_external_id: currentAppFeature.external_id,
+            text: title,
+          },
+        ]);
+      }
 
       if (!input) {
         return;

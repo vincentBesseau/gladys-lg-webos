@@ -328,6 +328,22 @@ test('dispatches writable television features', async () => {
     gladys: fakeGladys,
     client,
     config,
+    feature: feature(FEATURE_KEYS.SCREEN),
+    value: 0,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
+    feature: feature(FEATURE_KEYS.SCREEN),
+    value: 1,
+  });
+
+  await setTelevisionValue({
+    gladys: fakeGladys,
+    client,
+    config,
     feature: feature(FEATURE_KEYS.TOAST),
     value: {
       text: 'Bonjour',
@@ -394,6 +410,18 @@ test('dispatches writable television features', async () => {
     {
       uri: WEBOS_COMMANDS.CHANNEL_DOWN,
       payload: undefined,
+    },
+    {
+      uri: WEBOS_COMMANDS.SCREEN_OFF,
+      payload: {
+        standbyMode: 'active',
+      },
+    },
+    {
+      uri: WEBOS_COMMANDS.SCREEN_ON,
+      payload: {
+        standbyMode: 'active',
+      },
     },
     {
       uri: WEBOS_COMMANDS.CREATE_TOAST,
@@ -1228,7 +1256,8 @@ test('subscription reports screen-off as on and covers foreground app fallbacks'
     state: 'Screen Off',
   });
 
-  assert.equal(fakeGladys.published.at(-1).state, 1);
+  assert.equal(fakeGladys.published.at(-2).state, 1);
+  assert.equal(fakeGladys.published.at(-1).state, 0);
 
   await callbacks.get(WEBOS_COMMANDS.GET_CURRENT_CHANNEL)({
     channelNumber: '2',
@@ -1237,33 +1266,28 @@ test('subscription reports screen-off as on and covers foreground app fallbacks'
 
   assert.equal(fakeGladys.published.at(-1).text, '2 - France 2');
 
-  const countBeforeNetflix = fakeGladys.published.length;
-
   await callbacks.get(WEBOS_COMMANDS.FOREGROUND_APP)({
     appId: 'netflix',
   });
 
-  assert.equal(fakeGladys.published.length, countBeforeNetflix);
+  assert.equal(fakeGladys.published.at(-1).text, 'Netflix');
 
   await callbacks.get(WEBOS_COMMANDS.FOREGROUND_APP)({
     id: 'com.webos.app.hdmi3',
   });
 
+  assert.ok(fakeGladys.published.some((item) => item.text === 'Playstation 5'));
   assert.equal(fakeGladys.published.at(-1).text, 'HDMI_3');
-
-  const countBeforeUnknown = fakeGladys.published.length;
 
   await callbacks.get(WEBOS_COMMANDS.FOREGROUND_APP)({
     appId: 'unknown.app',
   });
 
-  assert.equal(fakeGladys.published.length, countBeforeUnknown);
-
-  const countBeforeEmpty = fakeGladys.published.length;
+  assert.equal(fakeGladys.published.at(-1).text, 'unknown.app');
 
   await callbacks.get(WEBOS_COMMANDS.FOREGROUND_APP)({});
 
-  assert.equal(fakeGladys.published.length, countBeforeEmpty);
+  assert.equal(fakeGladys.published.at(-1).text, 'unknown');
 });
 
 test('volume subscription covers partial and empty payloads', async () => {
