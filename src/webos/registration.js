@@ -21,6 +21,7 @@ export function buildRegistrationPayload(clientKey) {
           'WRITE_SETTINGS',
           'WRITE_NOTIFICATION_ALERT',
           'CONTROL_POWER',
+          'CONTROL_TV_SCREEN',
           'READ_CURRENT_CHANNEL',
           'READ_RUNNING_APPS',
           'READ_LGE_TV_INPUT_EVENTS',
