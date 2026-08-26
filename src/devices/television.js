@@ -480,7 +480,6 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
       if (powerFeature) {
         await gladys.publishState(powerFeature.external_id, isOn ? 1 : 0);
       }
-
     }),
   );
 

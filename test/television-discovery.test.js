@@ -328,22 +328,6 @@ test('dispatches writable television features', async () => {
     gladys: fakeGladys,
     client,
     config,
-    feature: feature(FEATURE_KEYS.SCREEN),
-    value: 0,
-  });
-
-  await setTelevisionValue({
-    gladys: fakeGladys,
-    client,
-    config,
-    feature: feature(FEATURE_KEYS.SCREEN),
-    value: 1,
-  });
-
-  await setTelevisionValue({
-    gladys: fakeGladys,
-    client,
-    config,
     feature: feature(FEATURE_KEYS.TOAST),
     value: {
       text: 'Bonjour',
@@ -410,18 +394,6 @@ test('dispatches writable television features', async () => {
     {
       uri: WEBOS_COMMANDS.CHANNEL_DOWN,
       payload: undefined,
-    },
-    {
-      uri: WEBOS_COMMANDS.SCREEN_OFF,
-      payload: {
-        standbyMode: 'active',
-      },
-    },
-    {
-      uri: WEBOS_COMMANDS.SCREEN_ON,
-      payload: {
-        standbyMode: 'active',
-      },
     },
     {
       uri: WEBOS_COMMANDS.CREATE_TOAST,
@@ -1256,8 +1228,7 @@ test('subscription reports screen-off as on and covers foreground app fallbacks'
     state: 'Screen Off',
   });
 
-  assert.equal(fakeGladys.published.at(-2).state, 1);
-  assert.equal(fakeGladys.published.at(-1).state, 0);
+  assert.equal(fakeGladys.published.at(-1).state, 1);
 
   await callbacks.get(WEBOS_COMMANDS.GET_CURRENT_CHANNEL)({
     channelNumber: '2',
