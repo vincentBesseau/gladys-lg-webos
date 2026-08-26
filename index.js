@@ -145,7 +145,6 @@ async function scanTelevisions() {
 }
 
 async function disconnectTv(runtime) {
-
   if (!runtime.wakingUp) {
     await publishPowerState(gladys, runtime.config, 0).catch(() => {});
   }
@@ -418,7 +417,6 @@ gladys.onSetValue(async (device, feature, value) => {
   );
 
   if (feature.external_id.endsWith(`:${FEATURE_KEYS.POWER}`) && Number(value) === 1) {
-
     const wasConnected = Boolean(runtime.client);
 
     runtime.wakingUp = !wasConnected;
@@ -506,7 +504,10 @@ async function rePairTv(runtime) {
 
     if (previousClientKey) {
       await connectTv(runtime).catch((reconnectError) => {
-        logger.warn(`Unable to restore previous LG webOS connection for ${tvLabel}`, reconnectError);
+        logger.warn(
+          `Unable to restore previous LG webOS connection for ${tvLabel}`,
+          reconnectError,
+        );
       });
     }
 
