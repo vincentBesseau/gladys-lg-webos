@@ -211,6 +211,11 @@ async function connectTv(runtime, { timeout = 15000 } = {}) {
   });
 
   nextClient.on('close', () => {
+    if (runtime.client && runtime.client !== nextClient) {
+      // A newer connection already replaced this one; ignore this stale close event.
+      return;
+    }
+
     logger.info('LG webOS connection closed: publishing Power OFF.');
 
     const intentionalDisconnect = runtime.intentionalDisconnect;
@@ -309,9 +314,9 @@ async function reconnectTvAfterUnexpectedClose(runtime) {
 
   runtime.reconnecting = true;
 
-  const maxAttempts = 10;
   const initialDelay = 3000;
-  const retryDelay = 5000;
+  const minRetryDelay = 5000;
+  const maxRetryDelay = 60000;
 
   logger.info(
     `LG webOS unexpected disconnect detected for ${
@@ -321,52 +326,47 @@ async function reconnectTvAfterUnexpectedClose(runtime) {
 
   await new Promise((resolve) => setTimeout(resolve, initialDelay));
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    if (runtime.client) {
-      runtime.reconnecting = false;
+  let attempt = 0;
+  let retryDelay = minRetryDelay;
 
-      return;
-    }
+  // The TV can stay unreachable for a long time (standby, Wi-Fi drop, reboot),
+  // so keep retrying indefinitely instead of giving up after a few attempts.
+  while (!runtime.client && !runtime.intentionalDisconnect && !runtime.wakingUp) {
+    attempt += 1;
 
     try {
       logger.info(
-        `LG webOS automatic reconnect attempt ${attempt}/${maxAttempts} for ${
+        `LG webOS automatic reconnect attempt ${attempt} for ${
           runtime.config.tv_name || runtime.config.tv_ip
         }`,
       );
 
       await connectTv(runtime);
 
-      runtime.reconnecting = false;
-
       logger.info(
         `LG webOS automatically reconnected to ${runtime.config.tv_name || runtime.config.tv_ip}`,
       );
 
-      return;
+      break;
     } catch (error) {
       logger.debug(
-        `LG webOS automatic reconnect attempt ${attempt}/${maxAttempts} failed for ${
+        `LG webOS automatic reconnect attempt ${attempt} failed for ${
           runtime.config.tv_name || runtime.config.tv_ip
         }`,
         error,
       );
     }
 
-    if (attempt < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, retryDelay));
+    if (runtime.client || runtime.intentionalDisconnect || runtime.wakingUp) {
+      break;
     }
+
+    await new Promise((resolve) => setTimeout(resolve, retryDelay));
+
+    retryDelay = Math.min(retryDelay * 2, maxRetryDelay);
   }
 
   runtime.reconnecting = false;
-
-  logger.warn(
-    `LG webOS automatic reconnect failed for ${
-      runtime.config.tv_name || runtime.config.tv_ip
-    } after ${maxAttempts} attempts`,
-  );
-
-  await updateConnectionStatus().catch(() => {});
 }
 
 async function adoptDiscoveredDevice(device) {
