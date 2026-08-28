@@ -1,5 +1,11 @@
 # Gladys LG webOS integration
 
+[![Latest version](https://img.shields.io/github/v/release/vincentBesseau/gladys-lg-webos?label=version)](https://github.com/vincentBesseau/gladys-lg-webos/releases/latest)
+[![CI](https://github.com/vincentBesseau/gladys-lg-webos/actions/workflows/ci.yml/badge.svg)](https://github.com/vincentBesseau/gladys-lg-webos/actions/workflows/ci.yml)
+[![Docker pulls](https://ghcr-badge.elias.eu.org/shield/vincentBesseau/gladys-lg-webos/gladys-lg-webos)](https://github.com/vincentBesseau/gladys-lg-webos/pkgs/container/gladys-lg-webos)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://www.apache.org/licenses/LICENSE-2.0)
+[![Gladys](https://img.shields.io/badge/gladys-%3E%3D4.86.1-6f42c1)](https://gladysassistant.com)
+
 External integration for [Gladys Assistant](https://gladysassistant.com) that
 controls **LG webOS televisions** over the local network.
 
