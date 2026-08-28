@@ -1,6 +1,6 @@
 # Gladys LG webOS integration
 
-[![Latest version](https://img.shields.io/github/v/release/vincentBesseau/gladys-lg-webos?label=version)](https://github.com/vincentBesseau/gladys-lg-webos/releases/latest)
+[![Latest version](https://img.shields.io/github/v/tag/vincentBesseau/gladys-lg-webos?label=version)](https://github.com/vincentBesseau/gladys-lg-webos/tags)
 [![CI](https://github.com/vincentBesseau/gladys-lg-webos/actions/workflows/ci.yml/badge.svg)](https://github.com/vincentBesseau/gladys-lg-webos/actions/workflows/ci.yml)
 [![Docker pulls](https://ghcr-badge.elias.eu.org/shield/vincentBesseau/gladys-lg-webos/gladys-lg-webos)](https://github.com/vincentBesseau/gladys-lg-webos/pkgs/container/gladys-lg-webos)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://www.apache.org/licenses/LICENSE-2.0)

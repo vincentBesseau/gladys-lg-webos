@@ -71,6 +71,12 @@ jobs:
             gladys-assistant-integration.json > "$tmp"
           mv "$tmp" gladys-assistant-integration.json
 
+          # jq's pretty-printer disagrees with Prettier on short arrays (each
+          # element on its own line vs. inlined), which would fail CI on the
+          # very next push. Reformat so the release commit stays clean.
+          npm ci
+          npx prettier --write gladys-assistant-integration.json
+
           echo "version=${new_version}" >> "$GITHUB_OUTPUT"
 
       # Note: if the branch you release from is protected against direct pushes,
