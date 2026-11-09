@@ -9,7 +9,7 @@
   },
   "version": "2.2.2",
   "docker_image": "ghcr.io/vincentbesseau/gladys-lg-webos:2.2.2",
-  "gladys_version": ">=4.86.1",
+  "gladys_version": ">=5.1.0",
   "categories": ["multimedia"],
   "cover_image": "https://raw.githubusercontent.com/vincentBesseau/gladys-lg-webos/main/cover.png",
   "transports": ["local"],
@@ -146,6 +146,143 @@
         "de": "TV-Verbindungen testen"
       },
       "timeout_seconds": 30
+    }
+  ],
+  "scene_triggers": [
+    {
+      "key": "tv_power_changed",
+      "label": {
+        "en": "TV turned on or off",
+        "fr": "TV allumée ou éteinte",
+        "de": "Fernseher ein- oder ausgeschaltet"
+      },
+      "description": {
+        "en": "Fires when the TV powers on or off. Leave State empty to react to both.",
+        "fr": "Se déclenche quand la TV s'allume ou s'éteint. Laissez État vide pour réagir aux deux.",
+        "de": "Wird ausgelöst, wenn der Fernseher ein- oder ausgeschaltet wird. Lassen Sie Status leer, um auf beide zu reagieren."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "TV",
+            "fr": "TV",
+            "de": "Fernseher"
+          },
+          "required": true
+        },
+        {
+          "key": "state",
+          "type": "select",
+          "label": {
+            "en": "State",
+            "fr": "État",
+            "de": "Status"
+          },
+          "required": false,
+          "options": [
+            {
+              "value": "on",
+              "label": {
+                "en": "Turned on",
+                "fr": "Allumée",
+                "de": "Eingeschaltet"
+              }
+            },
+            {
+              "value": "off",
+              "label": {
+                "en": "Turned off",
+                "fr": "Éteinte",
+                "de": "Ausgeschaltet"
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "key": "state",
+          "type": "string",
+          "label": {
+            "en": "State",
+            "fr": "État",
+            "de": "Status"
+          }
+        }
+      ]
+    },
+    {
+      "key": "tv_foreground_app_changed",
+      "label": {
+        "en": "TV foreground app changed",
+        "fr": "Application TV au premier plan changée",
+        "de": "TV-Vordergrund-App geändert"
+      },
+      "description": {
+        "en": "Fires when the app in the foreground on the TV changes (e.g. Netflix opens). Use the App variables in a condition to target one app.",
+        "fr": "Se déclenche quand l'application au premier plan sur la TV change (ex. Netflix démarre). Utilisez les variables Application dans une condition pour cibler une application.",
+        "de": "Wird ausgelöst, wenn sich die App im Vordergrund des Fernsehers ändert (z. B. Netflix startet). Verwenden Sie die App-Variablen in einer Bedingung, um eine App anzusprechen."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "TV",
+            "fr": "TV",
+            "de": "Fernseher"
+          },
+          "required": true
+        }
+      ],
+      "variables": [
+        {
+          "key": "app_id",
+          "type": "string",
+          "label": {
+            "en": "App id",
+            "fr": "Identifiant de l'application",
+            "de": "App-ID"
+          }
+        },
+        {
+          "key": "app_title",
+          "type": "string",
+          "label": {
+            "en": "App name",
+            "fr": "Nom de l'application",
+            "de": "App-Name"
+          }
+        }
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "key": "tv",
+      "label": {
+        "en": "TV remote",
+        "fr": "Télécommande TV",
+        "de": "TV-Fernbedienung"
+      },
+      "icon": "tv",
+      "settings": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "TV",
+            "fr": "TV",
+            "de": "Fernseher"
+          },
+          "required": true
+        }
+      ]
     }
   ]
 }

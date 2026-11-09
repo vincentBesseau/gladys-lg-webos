@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   FEATURE_KEYS,
+  SCENE_TRIGGERS,
   buildDiscoveredTelevisionDevice,
   buildTelevisionDevice,
   getExternalInputs,
@@ -1731,4 +1732,70 @@ test('dispatches writable television features', async () => {
   ]);
 
   //assert.deepEqual(buttons, ['HOME', 'BACK', 'ENTER', 'UP', 'DOWN', 'LEFT', 'RIGHT']);
+});
+
+test('fires scene events on power and foreground app transitions, not on the first observation', async () => {
+  const fakeGladys = createFakeGladys();
+  const callbacks = new Map();
+
+  const client = {
+    request: async (uri) => {
+      if (uri === WEBOS_COMMANDS.LIST_APPS) {
+        return { apps: [{ id: 'netflix', title: 'Netflix', visible: true }] };
+      }
+
+      if (uri === WEBOS_COMMANDS.GET_EXTERNAL_INPUT_LIST) {
+        return { devices: [] };
+      }
+
+      throw new Error(`Unexpected request ${uri}`);
+    },
+    subscribe: async (uri, callback) => {
+      callbacks.set(uri, callback);
+      return () => {};
+    },
+  };
+
+  const config = {
+    tv_name: 'TV',
+    tv_ip: '192.168.1.71',
+    tv_udn: 'uuid:test',
+    tv_platform_id: 'test',
+  };
+
+  await startTelevisionSubscriptions(fakeGladys, client, config);
+
+  const deviceExternalId = fakeGladys.discoveredDevices[0].external_id;
+
+  // First power observation → no event (nothing to transition from).
+  await callbacks.get(WEBOS_COMMANDS.GET_POWER_STATE)({ state: 'Active' });
+  assert.equal(fakeGladys.sceneEvents.length, 0);
+
+  // Same value again → still no event.
+  await callbacks.get(WEBOS_COMMANDS.GET_POWER_STATE)({ state: 'Active' });
+  assert.equal(fakeGladys.sceneEvents.length, 0);
+
+  // Transition on → off.
+  await callbacks.get(WEBOS_COMMANDS.GET_POWER_STATE)({ state: 'Suspend' });
+  assert.deepEqual(fakeGladys.sceneEvents.at(-1), {
+    key: SCENE_TRIGGERS.POWER_CHANGED,
+    data: { device: deviceExternalId, state: 'off' },
+  });
+
+  // First foreground app observation → no event.
+  await callbacks.get(WEBOS_COMMANDS.FOREGROUND_APP)({ appId: 'netflix' });
+  assert.ok(
+    !fakeGladys.sceneEvents.some((event) => event.key === SCENE_TRIGGERS.FOREGROUND_APP_CHANGED),
+  );
+
+  // App change → event with id and title.
+  await callbacks.get(WEBOS_COMMANDS.FOREGROUND_APP)({ appId: 'com.webos.app.livetv' });
+  assert.deepEqual(fakeGladys.sceneEvents.at(-1), {
+    key: SCENE_TRIGGERS.FOREGROUND_APP_CHANGED,
+    data: {
+      device: deviceExternalId,
+      app_id: 'com.webos.app.livetv',
+      app_title: 'com.webos.app.livetv',
+    },
+  });
 });

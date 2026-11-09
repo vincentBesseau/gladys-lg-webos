@@ -642,6 +642,63 @@ gladys.onAction('test_connection', async () => {
   };
 });
 
+gladys.onWidgetGet('tv', async ({ settings }) => {
+  const deviceExternalId = typeof settings?.device === 'string' ? settings.device : '';
+
+  if (!deviceExternalId) {
+    return { components: [] };
+  }
+
+  const feature = (key) => `${deviceExternalId}:${key}`;
+
+  return {
+    ttl_seconds: 30,
+    components: [
+      {
+        type: 'value',
+        label: { en: 'Volume', fr: 'Volume', de: 'Lautstärke' },
+        device_feature: feature(FEATURE_KEYS.VOLUME),
+      },
+      {
+        type: 'value',
+        label: { en: 'App', fr: 'Application', de: 'App' },
+        device_feature: feature(FEATURE_KEYS.CURRENT_APP),
+      },
+      {
+        type: 'value',
+        label: { en: 'Channel', fr: 'Chaîne', de: 'Sender' },
+        device_feature: feature(FEATURE_KEYS.CURRENT_CHANNEL),
+      },
+      {
+        type: 'button',
+        label: { en: 'On', fr: 'On', de: 'Ein' },
+        style: 'primary',
+        device_feature: feature(FEATURE_KEYS.POWER),
+        value: 1,
+      },
+      {
+        type: 'button',
+        label: { en: 'Off', fr: 'Off', de: 'Aus' },
+        style: 'danger',
+        device_feature: feature(FEATURE_KEYS.POWER),
+        value: 0,
+      },
+      {
+        type: 'button',
+        label: { en: 'Mute', fr: 'Muet', de: 'Stumm' },
+        device_feature: feature(FEATURE_KEYS.MUTE),
+        value: 1,
+      },
+      {
+        type: 'button',
+        label: { en: 'Home', fr: 'Accueil', de: 'Start' },
+        device_feature: feature(FEATURE_KEYS.HOME),
+        value: 1,
+      },
+    ],
+  };
+});
+
 gladys.onConfigUpdated(async (newConfig) => {
   const globalConfig = normalizeConfig(newConfig);
 
