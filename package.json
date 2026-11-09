@@ -1,6 +1,6 @@
 {
   "name": "gladys-lg-webos",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "private": true,
   "description": "LG webOS external integration for Gladys Assistant.",
   "type": "module",
@@ -16,7 +16,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@gladysassistant/integration-sdk": "^0.12.0"
+    "@gladysassistant/integration-sdk": "^0.16.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
