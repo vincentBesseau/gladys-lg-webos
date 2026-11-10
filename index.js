@@ -33,6 +33,32 @@ const {
   clearRuntimes,
 } = runtimeRegistry;
 
+// Publish a per-TV reachability badge (contract C.3): 'local' when its client
+// is connected, 'unreachable' otherwise. Gives each TV a colored badge in the
+// Gladys UI, including when only some of several TVs are down.
+async function publishTelevisionTransports(televisionRuntimes) {
+  const entries = [];
+
+  for (const runtime of televisionRuntimes) {
+    const device = buildTelevisionDevice(gladys, runtime.config);
+
+    if (!device) {
+      continue;
+    }
+
+    entries.push({
+      external_id: device.external_id,
+      transport: runtime.client ? 'local' : 'unreachable',
+    });
+  }
+
+  if (entries.length) {
+    await gladys
+      .publishTransports(entries)
+      .catch((error) => logger.warn('Unable to publish LG webOS transports', error));
+  }
+}
+
 async function updateConnectionStatus() {
   const televisionRuntimes = getUniqueRuntimes();
 
@@ -46,6 +72,8 @@ async function updateConnectionStatus() {
     return;
   }
 
+  await publishTelevisionTransports(televisionRuntimes);
+
   const connectedCount = televisionRuntimes.filter((runtime) => runtime.client).length;
 
   if (connectedCount > 0) {
@@ -56,10 +84,18 @@ async function updateConnectionStatus() {
     return;
   }
 
+  const single = televisionRuntimes.length === 1;
+
   await gladys.setConnectionStatus(false, {
-    en: 'All configured LG webOS TVs are currently unreachable.',
-    fr: 'Toutes les TV LG webOS configurées sont actuellement injoignables.',
-    de: 'Alle konfigurierten LG webOS Fernseher sind derzeit nicht erreichbar.',
+    en: single
+      ? 'The configured LG webOS TV is currently unreachable.'
+      : 'All configured LG webOS TVs are currently unreachable.',
+    fr: single
+      ? 'La TV LG webOS configurée est actuellement injoignable.'
+      : 'Toutes les TV LG webOS configurées sont actuellement injoignables.',
+    de: single
+      ? 'Der konfigurierte LG webOS Fernseher ist derzeit nicht erreichbar.'
+      : 'Alle konfigurierten LG webOS Fernseher sind derzeit nicht erreichbar.',
   });
 }
 
@@ -621,25 +657,47 @@ gladys.onAction('test_connection', async () => {
 
   const failedNames = failed.map(({ runtime }) => runtime.config.tv_name || runtime.config.tv_ip);
 
+  // Every TV is unreachable → throw so Gladys renders a red (error) toast.
+  if (connected.length === 0) {
+    const single = results.length === 1;
+
+    throw new Error(
+      single
+        ? `The LG webOS TV is unreachable: ${failedNames.join(', ')}.`
+        : `All ${results.length} LG webOS TVs are unreachable: ${failedNames.join(', ')}.`,
+    );
+  }
+
+  // Every TV connected (singular/plural wording).
+  if (failed.length === 0) {
+    const single = connected.length === 1;
+
+    return {
+      en: single
+        ? `Successfully connected to the TV: ${connectedNames.join(', ')}.`
+        : `Successfully connected to ${connected.length} TVs: ${connectedNames.join(', ')}.`,
+      fr: single
+        ? `Connexion réussie à la TV : ${connectedNames.join(', ')}.`
+        : `Connexion réussie aux ${connected.length} TV : ${connectedNames.join(', ')}.`,
+      de: single
+        ? `Verbindung zum Fernseher erfolgreich: ${connectedNames.join(', ')}.`
+        : `Verbindung zu ${connected.length} Fernsehern erfolgreich: ${connectedNames.join(', ')}.`,
+    };
+  }
+
+  // Partial: at least one connected and at least one unreachable (always ≥ 2 TVs).
   return {
-    en:
-      failed.length === 0
-        ? `Successfully connected to ${connected.length} TV(s): ${connectedNames.join(', ')}.`
-        : `Connected to ${connected.length}/${results.length} TV(s). Connected: ${
-            connectedNames.join(', ') || 'none'
-          }. Unreachable: ${failedNames.join(', ')}.`,
-    fr:
-      failed.length === 0
-        ? `Connexion réussie à ${connected.length} TV : ${connectedNames.join(', ')}.`
-        : `Connexion à ${connected.length}/${results.length} TV. Connectées : ${
-            connectedNames.join(', ') || 'aucune'
-          }. Injoignables : ${failedNames.join(', ')}.`,
-    de:
-      failed.length === 0
-        ? `Verbindung zu ${connected.length} TV(s) erfolgreich: ${connectedNames.join(', ')}.`
-        : `Verbindung zu ${connected.length}/${results.length} TV(s). Verbunden: ${
-            connectedNames.join(', ') || 'keine'
-          }. Nicht erreichbar: ${failedNames.join(', ')}.`,
+    en: `Connected to ${connected.length}/${results.length} TVs. Connected: ${connectedNames.join(
+      ', ',
+    )}. Unreachable: ${failedNames.join(', ')}.`,
+    fr: `Connexion à ${connected.length}/${results.length} TV. Connectées : ${connectedNames.join(
+      ', ',
+    )}. Injoignables : ${failedNames.join(', ')}.`,
+    de: `Verbindung zu ${connected.length}/${
+      results.length
+    } Fernsehern. Verbunden: ${connectedNames.join(', ')}. Nicht erreichbar: ${failedNames.join(
+      ', ',
+    )}.`,
   };
 });
 
