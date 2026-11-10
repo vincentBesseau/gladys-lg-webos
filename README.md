@@ -91,9 +91,17 @@ Notifications appear using the standard webOS toast notification system.
   (e.g. Netflix opens). Exposes `app_id` / `app_title` variables so a condition
   can target one app.
 
-**Dashboard widget** — a compact **TV remote** widget: live volume, current app
-and channel tiles, plus On / Off / Mute / Home buttons. Add it from the
-dashboard editor and pick the TV in its settings.
+**Scene actions** (scene editor → _Integrations_):
+
+- **Show a notification on the TV** — display a toast message.
+- **Launch an application** — by app id (e.g. `netflix`).
+- **Switch the input source** — by input id (e.g. `HDMI_1`).
+- **Set the volume** — 0 to 100.
+- **Send a remote button** — Home, Back, OK, arrows, Menu, Previous, Next.
+
+**Dashboard widget** — a compact **TV remote** widget: the TV name, a live volume
+gauge, current app and channel tiles, plus On / Off / Mute / Home buttons. Add it
+from the dashboard editor and pick the TV in its settings.
 
 ---
 
@@ -121,6 +129,7 @@ npm run format
 - ✅ Playback controls
 - ✅ TV notifications
 - ✅ Scene triggers (power, foreground app)
+- ✅ Scene actions (toast, launch app, switch input, volume, remote button)
 - ✅ Dashboard TV remote widget
 
 ### Planned

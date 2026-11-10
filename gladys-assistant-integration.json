@@ -261,6 +261,173 @@
       ]
     }
   ],
+  "scene_actions": [
+    {
+      "key": "show_toast",
+      "label": {
+        "en": "Show a notification on the TV",
+        "fr": "Afficher une notification sur la TV",
+        "de": "Benachrichtigung auf dem Fernseher anzeigen"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "required": true
+        },
+        {
+          "key": "message",
+          "type": "string",
+          "label": {
+            "en": "Message",
+            "fr": "Message",
+            "de": "Nachricht"
+          },
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "launch_app",
+      "label": {
+        "en": "Launch an application",
+        "fr": "Lancer une application",
+        "de": "Anwendung starten"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "required": true
+        },
+        {
+          "key": "app_id",
+          "type": "string",
+          "label": {
+            "en": "Application id",
+            "fr": "Identifiant de l'application",
+            "de": "App-ID"
+          },
+          "description": {
+            "en": "e.g. netflix, youtube.leanback.v4, com.webos.app.livetv. See the integration logs for the ids installed on your TV.",
+            "fr": "ex. netflix, youtube.leanback.v4, com.webos.app.livetv. Consultez les logs de l'intégration pour les identifiants installés sur votre TV.",
+            "de": "z. B. netflix, youtube.leanback.v4, com.webos.app.livetv. Siehe die Integrations-Logs für die auf Ihrem Fernseher installierten IDs."
+          },
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "switch_input",
+      "label": {
+        "en": "Switch the input source",
+        "fr": "Changer la source d'entrée",
+        "de": "Eingangsquelle wechseln"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "required": true
+        },
+        {
+          "key": "input_id",
+          "type": "string",
+          "label": {
+            "en": "Input id",
+            "fr": "Identifiant de l'entrée",
+            "de": "Eingangs-ID"
+          },
+          "description": {
+            "en": "e.g. HDMI_1, HDMI_2. See the integration logs for the inputs available on your TV.",
+            "fr": "ex. HDMI_1, HDMI_2. Consultez les logs de l'intégration pour les entrées disponibles sur votre TV.",
+            "de": "z. B. HDMI_1, HDMI_2. Siehe die Integrations-Logs für die verfügbaren Eingänge."
+          },
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "set_volume",
+      "label": {
+        "en": "Set the volume",
+        "fr": "Régler le volume",
+        "de": "Lautstärke einstellen"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "required": true
+        },
+        {
+          "key": "volume",
+          "type": "number",
+          "label": {
+            "en": "Volume (0-100)",
+            "fr": "Volume (0-100)",
+            "de": "Lautstärke (0-100)"
+          },
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "send_button",
+      "label": {
+        "en": "Send a remote button",
+        "fr": "Envoyer une touche de télécommande",
+        "de": "Fernbedienungstaste senden"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "required": true
+        },
+        {
+          "key": "button",
+          "type": "select",
+          "label": {
+            "en": "Button",
+            "fr": "Touche",
+            "de": "Taste"
+          },
+          "required": true,
+          "options": [
+            { "value": "HOME", "label": { "en": "Home", "fr": "Accueil", "de": "Start" } },
+            { "value": "BACK", "label": { "en": "Back", "fr": "Retour", "de": "Zurück" } },
+            { "value": "ENTER", "label": { "en": "OK", "fr": "OK", "de": "OK" } },
+            { "value": "UP", "label": { "en": "Up", "fr": "Haut", "de": "Hoch" } },
+            { "value": "DOWN", "label": { "en": "Down", "fr": "Bas", "de": "Runter" } },
+            { "value": "LEFT", "label": { "en": "Left", "fr": "Gauche", "de": "Links" } },
+            { "value": "RIGHT", "label": { "en": "Right", "fr": "Droite", "de": "Rechts" } },
+            { "value": "MENU", "label": { "en": "Menu", "fr": "Menu", "de": "Menü" } },
+            {
+              "value": "GOTOPREV",
+              "label": { "en": "Previous", "fr": "Précédent", "de": "Zurück" }
+            },
+            { "value": "GOTONEXT", "label": { "en": "Next", "fr": "Suivant", "de": "Weiter" } }
+          ]
+        }
+      ]
+    }
+  ],
   "widgets": [
     {
       "key": "tv",
