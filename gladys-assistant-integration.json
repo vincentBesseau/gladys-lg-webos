@@ -9,7 +9,7 @@
   },
   "version": "2.2.2",
   "docker_image": "ghcr.io/vincentbesseau/gladys-lg-webos:2.2.2",
-  "gladys_version": ">=4.86.1",
+  "gladys_version": ">=5.1.0",
   "categories": ["multimedia"],
   "cover_image": "https://raw.githubusercontent.com/vincentBesseau/gladys-lg-webos/main/cover.png",
   "transports": ["local"],
@@ -146,6 +146,310 @@
         "de": "TV-Verbindungen testen"
       },
       "timeout_seconds": 30
+    }
+  ],
+  "scene_triggers": [
+    {
+      "key": "tv_power_changed",
+      "label": {
+        "en": "TV turned on or off",
+        "fr": "TV allumée ou éteinte",
+        "de": "Fernseher ein- oder ausgeschaltet"
+      },
+      "description": {
+        "en": "Fires when the TV powers on or off. Leave State empty to react to both.",
+        "fr": "Se déclenche quand la TV s'allume ou s'éteint. Laissez État vide pour réagir aux deux.",
+        "de": "Wird ausgelöst, wenn der Fernseher ein- oder ausgeschaltet wird. Lassen Sie Status leer, um auf beide zu reagieren."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "TV",
+            "fr": "TV",
+            "de": "Fernseher"
+          },
+          "required": true
+        },
+        {
+          "key": "state",
+          "type": "select",
+          "label": {
+            "en": "State",
+            "fr": "État",
+            "de": "Status"
+          },
+          "required": false,
+          "options": [
+            {
+              "value": "on",
+              "label": {
+                "en": "Turned on",
+                "fr": "Allumée",
+                "de": "Eingeschaltet"
+              }
+            },
+            {
+              "value": "off",
+              "label": {
+                "en": "Turned off",
+                "fr": "Éteinte",
+                "de": "Ausgeschaltet"
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "key": "state",
+          "type": "string",
+          "label": {
+            "en": "State",
+            "fr": "État",
+            "de": "Status"
+          }
+        }
+      ]
+    },
+    {
+      "key": "tv_foreground_app_changed",
+      "label": {
+        "en": "TV foreground app changed",
+        "fr": "Application TV au premier plan changée",
+        "de": "TV-Vordergrund-App geändert"
+      },
+      "description": {
+        "en": "Fires when the app in the foreground on the TV changes (e.g. Netflix opens). Use the App variables in a condition to target one app.",
+        "fr": "Se déclenche quand l'application au premier plan sur la TV change (ex. Netflix démarre). Utilisez les variables Application dans une condition pour cibler une application.",
+        "de": "Wird ausgelöst, wenn sich die App im Vordergrund des Fernsehers ändert (z. B. Netflix startet). Verwenden Sie die App-Variablen in einer Bedingung, um eine App anzusprechen."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "TV",
+            "fr": "TV",
+            "de": "Fernseher"
+          },
+          "required": true
+        }
+      ],
+      "variables": [
+        {
+          "key": "app_id",
+          "type": "string",
+          "label": {
+            "en": "App id",
+            "fr": "Identifiant de l'application",
+            "de": "App-ID"
+          }
+        },
+        {
+          "key": "app_title",
+          "type": "string",
+          "label": {
+            "en": "App name",
+            "fr": "Nom de l'application",
+            "de": "App-Name"
+          }
+        }
+      ]
+    }
+  ],
+  "scene_actions": [
+    {
+      "key": "show_toast",
+      "label": {
+        "en": "Show a notification on the TV",
+        "fr": "Afficher une notification sur la TV",
+        "de": "Benachrichtigung auf dem Fernseher anzeigen"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "required": true
+        },
+        {
+          "key": "message",
+          "type": "string",
+          "label": {
+            "en": "Message",
+            "fr": "Message",
+            "de": "Nachricht"
+          },
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "launch_app",
+      "label": {
+        "en": "Launch an application",
+        "fr": "Lancer une application",
+        "de": "Anwendung starten"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "required": true
+        },
+        {
+          "key": "app_id",
+          "type": "string",
+          "label": {
+            "en": "Application id",
+            "fr": "Identifiant de l'application",
+            "de": "App-ID"
+          },
+          "description": {
+            "en": "e.g. netflix, youtube.leanback.v4, com.webos.app.livetv. See the integration logs for the ids installed on your TV.",
+            "fr": "ex. netflix, youtube.leanback.v4, com.webos.app.livetv. Consultez les logs de l'intégration pour les identifiants installés sur votre TV.",
+            "de": "z. B. netflix, youtube.leanback.v4, com.webos.app.livetv. Siehe die Integrations-Logs für die auf Ihrem Fernseher installierten IDs."
+          },
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "switch_input",
+      "label": {
+        "en": "Switch the input source",
+        "fr": "Changer la source d'entrée",
+        "de": "Eingangsquelle wechseln"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "required": true
+        },
+        {
+          "key": "input_id",
+          "type": "string",
+          "label": {
+            "en": "Input id",
+            "fr": "Identifiant de l'entrée",
+            "de": "Eingangs-ID"
+          },
+          "description": {
+            "en": "e.g. HDMI_1, HDMI_2. See the integration logs for the inputs available on your TV.",
+            "fr": "ex. HDMI_1, HDMI_2. Consultez les logs de l'intégration pour les entrées disponibles sur votre TV.",
+            "de": "z. B. HDMI_1, HDMI_2. Siehe die Integrations-Logs für die verfügbaren Eingänge."
+          },
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "set_volume",
+      "label": {
+        "en": "Set the volume",
+        "fr": "Régler le volume",
+        "de": "Lautstärke einstellen"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "required": true
+        },
+        {
+          "key": "volume",
+          "type": "number",
+          "label": {
+            "en": "Volume (0-100)",
+            "fr": "Volume (0-100)",
+            "de": "Lautstärke (0-100)"
+          },
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "send_button",
+      "label": {
+        "en": "Send a remote button",
+        "fr": "Envoyer une touche de télécommande",
+        "de": "Fernbedienungstaste senden"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "required": true
+        },
+        {
+          "key": "button",
+          "type": "select",
+          "label": {
+            "en": "Button",
+            "fr": "Touche",
+            "de": "Taste"
+          },
+          "required": true,
+          "options": [
+            { "value": "HOME", "label": { "en": "Home", "fr": "Accueil", "de": "Start" } },
+            { "value": "BACK", "label": { "en": "Back", "fr": "Retour", "de": "Zurück" } },
+            { "value": "ENTER", "label": { "en": "OK", "fr": "OK", "de": "OK" } },
+            { "value": "UP", "label": { "en": "Up", "fr": "Haut", "de": "Hoch" } },
+            { "value": "DOWN", "label": { "en": "Down", "fr": "Bas", "de": "Runter" } },
+            { "value": "LEFT", "label": { "en": "Left", "fr": "Gauche", "de": "Links" } },
+            { "value": "RIGHT", "label": { "en": "Right", "fr": "Droite", "de": "Rechts" } },
+            { "value": "MENU", "label": { "en": "Menu", "fr": "Menu", "de": "Menü" } },
+            {
+              "value": "GOTOPREV",
+              "label": { "en": "Previous", "fr": "Précédent", "de": "Zurück" }
+            },
+            { "value": "GOTONEXT", "label": { "en": "Next", "fr": "Suivant", "de": "Weiter" } }
+          ]
+        }
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "key": "tv",
+      "label": {
+        "en": "TV remote",
+        "fr": "Télécommande TV",
+        "de": "TV-Fernbedienung"
+      },
+      "icon": "tv",
+      "settings": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "TV",
+            "fr": "TV",
+            "de": "Fernseher"
+          },
+          "required": true
+        }
+      ]
     }
   ]
 }

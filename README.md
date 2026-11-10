@@ -79,6 +79,32 @@ Notifications appear using the standard webOS toast notification system.
 
 ---
 
+## Scenes and dashboard
+
+> Requires Gladys **5.1.0** or newer.
+
+**Scene triggers** (scene editor → _Integrations_):
+
+- **TV turned on or off** — fires on power transitions. Leave _State_ empty to
+  react to both, or pick on/off.
+- **TV foreground app changed** — fires when the app in the foreground changes
+  (e.g. Netflix opens). Exposes `app_id` / `app_title` variables so a condition
+  can target one app.
+
+**Scene actions** (scene editor → _Integrations_):
+
+- **Show a notification on the TV** — display a toast message.
+- **Launch an application** — by app id (e.g. `netflix`).
+- **Switch the input source** — by input id (e.g. `HDMI_1`).
+- **Set the volume** — 0 to 100.
+- **Send a remote button** — Home, Back, OK, arrows, Menu, Previous, Next.
+
+**Dashboard widget** — a compact **TV remote** widget: the TV name, a live volume
+gauge, current app and channel tiles, plus On / Off / Mute / Home buttons. Add it
+from the dashboard editor and pick the TV in its settings.
+
+---
+
 ## Development
 
 ```bash
@@ -102,6 +128,9 @@ npm run format
 - ✅ Mute
 - ✅ Playback controls
 - ✅ TV notifications
+- ✅ Scene triggers (power, foreground app)
+- ✅ Scene actions (toast, launch app, switch input, volume, remote button)
+- ✅ Dashboard TV remote widget
 
 ### Planned
 

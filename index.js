@@ -13,6 +13,7 @@ import {
   createTelevisionRuntime,
   createTelevisionRuntimeRegistry,
 } from './src/runtime/televisions.js';
+import { WEBOS_COMMANDS } from './src/webos/commands.js';
 import { WebOsClient } from './src/webos/client.js';
 
 const gladys = new GladysIntegration();
@@ -639,6 +640,161 @@ gladys.onAction('test_connection', async () => {
         : `Verbindung zu ${connected.length}/${results.length} TV(s). Verbunden: ${
             connectedNames.join(', ') || 'keine'
           }. Nicht erreichbar: ${failedNames.join(', ')}.`,
+  };
+});
+
+function getConnectedClientForDevice(deviceExternalId) {
+  const id = typeof deviceExternalId === 'string' ? deviceExternalId : '';
+
+  if (!id) {
+    throw new Error('Select an LG webOS TV.');
+  }
+
+  const runtime = getRuntimeForDevice({ external_id: id });
+
+  if (!runtime.client) {
+    throw new Error('LG webOS TV is not connected.');
+  }
+
+  return runtime.client;
+}
+
+gladys.onSceneAction('show_toast', async (fields) => {
+  const message = String(fields.message ?? '').trim();
+
+  if (!message) {
+    throw new Error('Toast message cannot be empty.');
+  }
+
+  const client = getConnectedClientForDevice(fields.device);
+
+  await client.request(WEBOS_COMMANDS.CREATE_TOAST, { message });
+});
+
+gladys.onSceneAction('launch_app', async (fields) => {
+  const appId = String(fields.app_id ?? '').trim();
+
+  if (!appId) {
+    throw new Error('Application id cannot be empty.');
+  }
+
+  const client = getConnectedClientForDevice(fields.device);
+
+  await client.request(WEBOS_COMMANDS.LAUNCH_APP, { id: appId });
+});
+
+gladys.onSceneAction('switch_input', async (fields) => {
+  const inputId = String(fields.input_id ?? '').trim();
+
+  if (!inputId) {
+    throw new Error('Input id cannot be empty.');
+  }
+
+  const client = getConnectedClientForDevice(fields.device);
+
+  await client.request(WEBOS_COMMANDS.SWITCH_INPUT, { inputId });
+});
+
+gladys.onSceneAction('set_volume', async (fields) => {
+  const volume = Math.round(Number(fields.volume));
+
+  if (!Number.isFinite(volume)) {
+    throw new Error('Volume must be a number.');
+  }
+
+  const client = getConnectedClientForDevice(fields.device);
+
+  await client.request(WEBOS_COMMANDS.SET_VOLUME, {
+    volume: Math.max(0, Math.min(100, volume)),
+  });
+});
+
+gladys.onSceneAction('send_button', async (fields) => {
+  const button = String(fields.button ?? '').trim();
+
+  if (!button) {
+    throw new Error('Select a remote button.');
+  }
+
+  const client = getConnectedClientForDevice(fields.device);
+
+  await client.sendButton(button);
+});
+
+gladys.onWidgetGet('tv', async ({ settings }) => {
+  const deviceExternalId = typeof settings?.device === 'string' ? settings.device : '';
+
+  if (!deviceExternalId) {
+    return { components: [] };
+  }
+
+  const feature = (key) => `${deviceExternalId}:${key}`;
+
+  let tvName = 'TV';
+
+  try {
+    const devices = await gladys.getDevices();
+    const device = devices.find((candidate) => candidate.external_id === deviceExternalId);
+
+    if (device?.name) {
+      tvName = device.name;
+    }
+  } catch (error) {
+    logger.warn('Unable to resolve LG webOS TV name for the widget', error);
+  }
+
+  return {
+    ttl_seconds: 30,
+    components: [
+      {
+        type: 'text',
+        variant: 'heading',
+        text: tvName,
+      },
+      {
+        type: 'gauge',
+        label: { en: 'Volume', fr: 'Volume', de: 'Lautstärke' },
+        device_feature: feature(FEATURE_KEYS.VOLUME),
+        min: 0,
+        max: 100,
+      },
+      {
+        type: 'value',
+        label: { en: 'App', fr: 'Application', de: 'App' },
+        device_feature: feature(FEATURE_KEYS.CURRENT_APP),
+      },
+      {
+        type: 'value',
+        label: { en: 'Channel', fr: 'Chaîne', de: 'Sender' },
+        device_feature: feature(FEATURE_KEYS.CURRENT_CHANNEL),
+      },
+      {
+        type: 'button',
+        label: { en: 'On', fr: 'On', de: 'Ein' },
+        style: 'primary',
+        device_feature: feature(FEATURE_KEYS.POWER),
+        value: 1,
+      },
+      {
+        type: 'button',
+        label: { en: 'Off', fr: 'Off', de: 'Aus' },
+        style: 'danger',
+        device_feature: feature(FEATURE_KEYS.POWER),
+        value: 0,
+      },
+      {
+        type: 'button',
+        label: { en: 'Mute', fr: 'Muet', de: 'Stumm' },
+        device_feature: feature(FEATURE_KEYS.MUTE),
+        value: 1,
+      },
+      {
+        type: 'button',
+        label: { en: 'Home', fr: 'Accueil', de: 'Start' },
+        device_feature: feature(FEATURE_KEYS.HOME),
+        value: 1,
+      },
+    ],
   };
 });
 

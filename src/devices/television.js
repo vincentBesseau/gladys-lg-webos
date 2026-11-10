@@ -1,6 +1,11 @@
 import { WEBOS_COMMANDS } from '../webos/commands.js';
 import { logger } from '@gladysassistant/integration-sdk';
 
+export const SCENE_TRIGGERS = Object.freeze({
+  POWER_CHANGED: 'tv_power_changed',
+  FOREGROUND_APP_CHANGED: 'tv_foreground_app_changed',
+});
+
 export const FEATURE_KEYS = Object.freeze({
   POWER: 'binary',
   VOLUME: 'volume',
@@ -397,6 +402,11 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
   let applications = [];
   let inputs = [];
 
+  // Transition tracking so scene triggers fire once per change, not on every
+  // subscription payload (and never on the first observation after connect).
+  let lastPowerOn;
+  let lastForegroundAppId;
+
   try {
     applications = await getInstalledApplications(client);
 
@@ -480,6 +490,17 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
       if (powerFeature) {
         await gladys.publishState(powerFeature.external_id, isOn ? 1 : 0);
       }
+
+      if (lastPowerOn !== undefined && lastPowerOn !== isOn) {
+        await gladys
+          .publishSceneEvent(SCENE_TRIGGERS.POWER_CHANGED, {
+            device: device.external_id,
+            state: isOn ? 'on' : 'off',
+          })
+          .catch((error) => logger.warn('Unable to publish LG webOS power scene event', error));
+      }
+
+      lastPowerOn = isOn;
     }),
   );
 
@@ -507,6 +528,22 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
             text: title,
           },
         ]);
+      }
+
+      if (appId && lastForegroundAppId !== undefined && lastForegroundAppId !== appId) {
+        await gladys
+          .publishSceneEvent(SCENE_TRIGGERS.FOREGROUND_APP_CHANGED, {
+            device: device.external_id,
+            app_id: appId,
+            app_title: title,
+          })
+          .catch((error) =>
+            logger.warn('Unable to publish LG webOS foreground app scene event', error),
+          );
+      }
+
+      if (appId) {
+        lastForegroundAppId = appId;
       }
 
       if (!input) {

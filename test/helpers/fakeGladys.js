@@ -18,6 +18,7 @@ export function createFakeGladys() {
   const connectionStatuses = [];
   const discoveredDevices = [];
   const wakeOnLanCalls = [];
+  const sceneEvents = [];
 
   return {
     published,
@@ -26,6 +27,11 @@ export function createFakeGladys() {
     connectionStatuses,
     discoveredDevices,
     wakeOnLanCalls,
+    sceneEvents,
+
+    async publishSceneEvent(key, data) {
+      sceneEvents.push({ key, data });
+    },
 
     externalIds(type, platformId) {
       const device = `${type}:${platformId}`;
