@@ -7,8 +7,8 @@
     "fr": "Contrôlez localement une télévision LG webOS depuis Gladys Assistant.",
     "de": "Steuern Sie einen LG webOS Fernseher lokal über Gladys Assistant."
   },
-  "version": "2.2.2",
-  "docker_image": "ghcr.io/vincentbesseau/gladys-lg-webos:2.2.2",
+  "version": "2.2.3",
+  "docker_image": "ghcr.io/vincentbesseau/gladys-lg-webos:2.2.3",
   "gladys_version": ">=5.1.0",
   "categories": ["multimedia"],
   "cover_image": "https://raw.githubusercontent.com/vincentBesseau/gladys-lg-webos/main/cover.png",
@@ -275,7 +275,11 @@
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "label": {
+            "en": "TV",
+            "fr": "TV",
+            "de": "Fernseher"
+          },
           "required": true
         },
         {
@@ -303,7 +307,11 @@
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "label": {
+            "en": "TV",
+            "fr": "TV",
+            "de": "Fernseher"
+          },
           "required": true
         },
         {
@@ -336,7 +344,11 @@
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "label": {
+            "en": "TV",
+            "fr": "TV",
+            "de": "Fernseher"
+          },
           "required": true
         },
         {
@@ -369,7 +381,11 @@
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "label": {
+            "en": "TV",
+            "fr": "TV",
+            "de": "Fernseher"
+          },
           "required": true
         },
         {
@@ -397,7 +413,11 @@
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "TV", "fr": "TV", "de": "Fernseher" },
+          "label": {
+            "en": "TV",
+            "fr": "TV",
+            "de": "Fernseher"
+          },
           "required": true
         },
         {
@@ -410,19 +430,86 @@
           },
           "required": true,
           "options": [
-            { "value": "HOME", "label": { "en": "Home", "fr": "Accueil", "de": "Start" } },
-            { "value": "BACK", "label": { "en": "Back", "fr": "Retour", "de": "Zurück" } },
-            { "value": "ENTER", "label": { "en": "OK", "fr": "OK", "de": "OK" } },
-            { "value": "UP", "label": { "en": "Up", "fr": "Haut", "de": "Hoch" } },
-            { "value": "DOWN", "label": { "en": "Down", "fr": "Bas", "de": "Runter" } },
-            { "value": "LEFT", "label": { "en": "Left", "fr": "Gauche", "de": "Links" } },
-            { "value": "RIGHT", "label": { "en": "Right", "fr": "Droite", "de": "Rechts" } },
-            { "value": "MENU", "label": { "en": "Menu", "fr": "Menu", "de": "Menü" } },
+            {
+              "value": "HOME",
+              "label": {
+                "en": "Home",
+                "fr": "Accueil",
+                "de": "Start"
+              }
+            },
+            {
+              "value": "BACK",
+              "label": {
+                "en": "Back",
+                "fr": "Retour",
+                "de": "Zurück"
+              }
+            },
+            {
+              "value": "ENTER",
+              "label": {
+                "en": "OK",
+                "fr": "OK",
+                "de": "OK"
+              }
+            },
+            {
+              "value": "UP",
+              "label": {
+                "en": "Up",
+                "fr": "Haut",
+                "de": "Hoch"
+              }
+            },
+            {
+              "value": "DOWN",
+              "label": {
+                "en": "Down",
+                "fr": "Bas",
+                "de": "Runter"
+              }
+            },
+            {
+              "value": "LEFT",
+              "label": {
+                "en": "Left",
+                "fr": "Gauche",
+                "de": "Links"
+              }
+            },
+            {
+              "value": "RIGHT",
+              "label": {
+                "en": "Right",
+                "fr": "Droite",
+                "de": "Rechts"
+              }
+            },
+            {
+              "value": "MENU",
+              "label": {
+                "en": "Menu",
+                "fr": "Menu",
+                "de": "Menü"
+              }
+            },
             {
               "value": "GOTOPREV",
-              "label": { "en": "Previous", "fr": "Précédent", "de": "Zurück" }
+              "label": {
+                "en": "Previous",
+                "fr": "Précédent",
+                "de": "Zurück"
+              }
             },
-            { "value": "GOTONEXT", "label": { "en": "Next", "fr": "Suivant", "de": "Weiter" } }
+            {
+              "value": "GOTONEXT",
+              "label": {
+                "en": "Next",
+                "fr": "Suivant",
+                "de": "Weiter"
+              }
+            }
           ]
         }
       ]
