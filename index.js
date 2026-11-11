@@ -658,13 +658,17 @@ gladys.onAction('test_connection', async () => {
   const failedNames = failed.map(({ runtime }) => runtime.config.tv_name || runtime.config.tv_ip);
 
   // Every TV is unreachable → throw so Gladys renders a red (error) toast.
+  // The SDK relays a thrown error as a raw string (no per-language object and
+  // no user language in onAction), so this message cannot be localized like the
+  // success ones. This integration targets the French Gladys community, so the
+  // red toast is written in French.
   if (connected.length === 0) {
     const single = results.length === 1;
 
     throw new Error(
       single
-        ? `The LG webOS TV is unreachable: ${failedNames.join(', ')}.`
-        : `All ${results.length} LG webOS TVs are unreachable: ${failedNames.join(', ')}.`,
+        ? `La TV LG webOS est injoignable : ${failedNames.join(', ')}.`
+        : `Les ${results.length} TV LG webOS sont injoignables : ${failedNames.join(', ')}.`,
     );
   }
 
