@@ -1,4 +1,5 @@
 import { GladysIntegration, logger } from '@gladysassistant/integration-sdk';
+import { ActionFailure } from './src/action-failure.js';
 import { normalizeConfig, normalizeTelevisionsConfig, validateConfig } from './src/config.js';
 import {
   FEATURE_KEYS,
@@ -657,15 +658,23 @@ gladys.onAction('test_connection', async () => {
 
   const failedNames = failed.map(({ runtime }) => runtime.config.tv_name || runtime.config.tv_ip);
 
-  // Every TV is unreachable → throw so Gladys renders a red (error) toast.
+  // Every TV is unreachable → throw an ActionFailure so Gladys renders a RED
+  // (error) toast that is also localized per user language (its message is a
+  // multi-language object the SDK relays as-is).
   if (connected.length === 0) {
     const single = results.length === 1;
 
-    throw new Error(
-      single
+    throw new ActionFailure({
+      en: single
         ? `The LG webOS TV is unreachable: ${failedNames.join(', ')}.`
         : `All ${results.length} LG webOS TVs are unreachable: ${failedNames.join(', ')}.`,
-    );
+      fr: single
+        ? `La TV LG webOS est injoignable : ${failedNames.join(', ')}.`
+        : `Les ${results.length} TV LG webOS sont injoignables : ${failedNames.join(', ')}.`,
+      de: single
+        ? `Der LG webOS Fernseher ist nicht erreichbar: ${failedNames.join(', ')}.`
+        : `Die ${results.length} LG webOS Fernseher sind nicht erreichbar: ${failedNames.join(', ')}.`,
+    });
   }
 
   // Every TV connected (singular/plural wording).
