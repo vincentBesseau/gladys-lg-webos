@@ -19,6 +19,7 @@ export function createFakeGladys() {
   const discoveredDevices = [];
   const wakeOnLanCalls = [];
   const sceneEvents = [];
+  const widgetRefreshes = [];
 
   return {
     published,
@@ -28,9 +29,14 @@ export function createFakeGladys() {
     discoveredDevices,
     wakeOnLanCalls,
     sceneEvents,
+    widgetRefreshes,
 
     async publishSceneEvent(key, data) {
       sceneEvents.push({ key, data });
+    },
+
+    requestWidgetRefresh(key) {
+      widgetRefreshes.push(key);
     },
 
     externalIds(type, platformId) {

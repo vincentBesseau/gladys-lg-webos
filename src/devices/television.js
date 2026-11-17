@@ -425,6 +425,17 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
   let lastPowerOn;
   let lastForegroundAppId;
 
+  // Nudge the dashboard TV widget to re-pull its content right away when the
+  // state it shows changes (power, foreground app/source, channel, volume/mute),
+  // instead of waiting for its ttl. Rate-limited core-side (1 per 10 s).
+  const refreshWidget = () => {
+    try {
+      gladys.requestWidgetRefresh('tv');
+    } catch (error) {
+      logger.debug('Unable to request LG webOS widget refresh', error);
+    }
+  };
+
   try {
     applications = await getInstalledApplications(client);
 
@@ -509,6 +520,10 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
         await gladys.publishState(powerFeature.external_id, isOn ? 1 : 0);
       }
 
+      if (lastPowerOn !== isOn) {
+        refreshWidget();
+      }
+
       if (lastPowerOn !== undefined && lastPowerOn !== isOn) {
         await gladys
           .publishSceneEvent(SCENE_TRIGGERS.POWER_CHANGED, {
@@ -546,6 +561,10 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
             text: title,
           },
         ]);
+      }
+
+      if (appId && appId !== lastForegroundAppId) {
+        refreshWidget();
       }
 
       if (appId && lastForegroundAppId !== undefined && lastForegroundAppId !== appId) {
@@ -609,6 +628,8 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
           text: label,
         },
       ]);
+
+      refreshWidget();
     }),
   );
 
@@ -635,6 +656,7 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
 
       if (states.length) {
         await gladys.publishStates(states);
+        refreshWidget();
       }
     }),
   );
