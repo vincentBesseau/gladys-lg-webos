@@ -16,6 +16,7 @@ import {
 } from './src/runtime/televisions.js';
 import { WEBOS_COMMANDS } from './src/webos/commands.js';
 import { WebOsClient } from './src/webos/client.js';
+import { buildTvStatusItems, readTvWidgetState } from './src/widget-tv.js';
 
 const gladys = new GladysIntegration();
 
@@ -797,72 +798,77 @@ gladys.onWidgetGet('tv', async ({ settings }) => {
 
   const feature = (key) => `${deviceExternalId}:${key}`;
 
-  let tvName = 'TV';
+  let state = { tvName: 'TV', muted: false };
 
   try {
     const devices = await gladys.getDevices();
     const device = devices.find((candidate) => candidate.external_id === deviceExternalId);
 
-    if (device?.name) {
-      tvName = device.name;
-    }
+    state = readTvWidgetState(device);
   } catch (error) {
-    logger.warn('Unable to resolve LG webOS TV name for the widget', error);
+    logger.warn('Unable to read LG webOS TV state for the widget', error);
   }
 
-  return {
-    ttl_seconds: 30,
-    components: [
-      {
-        type: 'text',
-        variant: 'heading',
-        text: tvName,
-      },
-      {
-        type: 'gauge',
-        label: { en: 'Volume', fr: 'Volume', de: 'Lautstärke' },
-        device_feature: feature(FEATURE_KEYS.VOLUME),
-        min: 0,
-        max: 100,
-      },
-      {
-        type: 'value',
-        label: { en: 'App', fr: 'Application', de: 'App' },
-        device_feature: feature(FEATURE_KEYS.CURRENT_APP),
-      },
-      {
-        type: 'value',
-        label: { en: 'Channel', fr: 'Chaîne', de: 'Sender' },
-        device_feature: feature(FEATURE_KEYS.CURRENT_CHANNEL),
-      },
-      {
-        type: 'button',
-        label: { en: 'On', fr: 'On', de: 'Ein' },
-        style: 'primary',
-        device_feature: feature(FEATURE_KEYS.POWER),
-        value: 1,
-      },
-      {
-        type: 'button',
-        label: { en: 'Off', fr: 'Off', de: 'Aus' },
-        style: 'danger',
-        device_feature: feature(FEATURE_KEYS.POWER),
-        value: 0,
-      },
-      {
-        type: 'button',
-        label: { en: 'Mute', fr: 'Muet', de: 'Stumm' },
-        device_feature: feature(FEATURE_KEYS.MUTE),
-        value: 1,
-      },
-      {
-        type: 'button',
-        label: { en: 'Home', fr: 'Accueil', de: 'Start' },
-        device_feature: feature(FEATURE_KEYS.HOME),
-        value: 1,
-      },
-    ],
-  };
+  const components = [{ type: 'text', variant: 'heading', text: state.tvName }];
+
+  const statusItems = buildTvStatusItems(state);
+
+  if (statusItems.length) {
+    components.push({ type: 'status', items: statusItems });
+  }
+
+  components.push(
+    {
+      type: 'button',
+      label: { en: 'On', fr: 'On', de: 'Ein' },
+      style: 'primary',
+      device_feature: feature(FEATURE_KEYS.POWER),
+      value: 1,
+    },
+    {
+      type: 'button',
+      label: { en: 'Off', fr: 'Off', de: 'Aus' },
+      style: 'danger',
+      device_feature: feature(FEATURE_KEYS.POWER),
+      value: 0,
+    },
+    {
+      // A single toggle via onWidgetAction: it reads the real mute state and
+      // flips it, and the core refetches the content afterwards so the label
+      // updates — unlike a device_feature button, which could only ever send a
+      // fixed value (and so could never un-mute).
+      type: 'button',
+      label: state.muted
+        ? { en: 'Unmute', fr: 'Rétablir le son', de: 'Ton ein' }
+        : { en: 'Mute', fr: 'Couper le son', de: 'Stummschalten' },
+      action: { key: 'toggle_mute' },
+    },
+    {
+      type: 'button',
+      label: { en: 'Home', fr: 'Accueil', de: 'Start' },
+      device_feature: feature(FEATURE_KEYS.HOME),
+      value: 1,
+    },
+  );
+
+  return { ttl_seconds: 30, components };
+});
+
+gladys.onWidgetAction('tv', async (actionKey, params, { settings }) => {
+  if (actionKey !== 'toggle_mute') {
+    return undefined;
+  }
+
+  const client = getConnectedClientForDevice(settings?.device);
+
+  const payload = await client.request(WEBOS_COMMANDS.GET_VOLUME);
+  const muted = Boolean(payload?.muted);
+
+  await client.request(WEBOS_COMMANDS.SET_MUTE, { mute: !muted });
+
+  return muted
+    ? { en: 'Sound restored.', fr: 'Son rétabli.', de: 'Ton wiederhergestellt.' }
+    : { en: 'Sound muted.', fr: 'Son coupé.', de: 'Ton stummgeschaltet.' };
 });
 
 gladys.onConfigUpdated(async (newConfig) => {
