@@ -238,6 +238,24 @@ export function paramsToObject(device) {
   return Object.fromEntries((device?.params || []).map(({ name, value }) => [name, value]));
 }
 
+// Read volume and mute from an ssap://audio/getVolume response. Recent webOS
+// firmwares nest them under `volumeStatus` (volume / muteStatus) instead of the
+// legacy top-level `volume` / `muted`, so accept both shapes.
+export function extractVolumeState(payload = {}) {
+  const status = payload.volumeStatus || {};
+
+  const rawVolume = payload.volume ?? status.volume;
+  const muted = payload.muted ?? status.muteStatus;
+
+  const volume =
+    rawVolume === undefined || rawVolume === null || rawVolume === '' ? NaN : Number(rawVolume);
+
+  return {
+    volume: Number.isFinite(volume) ? volume : undefined,
+    muted: typeof muted === 'boolean' ? muted : undefined,
+  };
+}
+
 export async function setTelevisionValue({ gladys, client, config, feature, value }) {
   const key = feature.external_id.split(':').at(-1);
   const remoteKey = REMOTE_KEYS.find((candidate) => candidate.key === key);
@@ -596,19 +614,22 @@ export async function startTelevisionSubscriptions(gladys, client, config) {
 
   cleanups.push(
     await client.subscribe(WEBOS_COMMANDS.GET_VOLUME, async (payload) => {
+      logger.info(`LG webOS volume payload: ${JSON.stringify(payload)}`);
+
+      const { volume, muted } = extractVolumeState(payload);
       const states = [];
 
-      if (payload.volume !== undefined) {
+      if (volume !== undefined) {
         states.push({
           device_feature_external_id: byType.get('volume').external_id,
-          state: Number(payload.volume),
+          state: Number(volume),
         });
       }
 
-      if (payload.muted !== undefined) {
+      if (muted !== undefined) {
         states.push({
           device_feature_external_id: byType.get('volume-mute').external_id,
-          state: payload.muted ? 1 : 0,
+          state: muted ? 1 : 0,
         });
       }
 
