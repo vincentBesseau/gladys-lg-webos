@@ -1798,4 +1798,7 @@ test('fires scene events on power and foreground app transitions, not on the fir
       app_title: 'com.webos.app.livetv',
     },
   });
+
+  // State changes nudge the dashboard widget to re-pull its content.
+  assert.ok(fakeGladys.widgetRefreshes.includes('tv'));
 });
