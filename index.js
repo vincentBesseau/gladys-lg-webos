@@ -5,6 +5,7 @@ import {
   FEATURE_KEYS,
   buildDiscoveredTelevisionDevice,
   buildTelevisionDevice,
+  extractVolumeState,
   publishPowerState,
   setTelevisionValue,
   startTelevisionSubscriptions,
@@ -839,7 +840,7 @@ gladys.onWidgetGet('tv', async ({ settings }) => {
       // fixed value (and so could never un-mute).
       type: 'button',
       label: state.muted
-        ? { en: 'Unmute', fr: 'Rétablir le son', de: 'Ton ein' }
+        ? { en: 'Unmute', fr: 'Remettre le son', de: 'Ton ein' }
         : { en: 'Mute', fr: 'Couper le son', de: 'Stummschalten' },
       action: { key: 'toggle_mute' },
     },
@@ -862,7 +863,7 @@ gladys.onWidgetAction('tv', async (actionKey, params, { settings }) => {
   const client = getConnectedClientForDevice(settings?.device);
 
   const payload = await client.request(WEBOS_COMMANDS.GET_VOLUME);
-  const muted = Boolean(payload?.muted);
+  const muted = extractVolumeState(payload).muted ?? false;
 
   await client.request(WEBOS_COMMANDS.SET_MUTE, { mute: !muted });
 
