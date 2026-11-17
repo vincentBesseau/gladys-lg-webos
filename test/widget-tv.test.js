@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readTvWidgetState, buildTvStatusItems } from '../src/widget-tv.js';
+import { readTvWidgetState, buildTvStatusItems, classifyForeground } from '../src/widget-tv.js';
 
 const deviceWith = (features) => ({
   name: 'Salon',
@@ -60,4 +60,37 @@ test('tolerates a missing device', () => {
   assert.equal(state.tvName, 'TV');
   assert.equal(state.volume, undefined);
   assert.deepEqual(buildTvStatusItems(state), []);
+});
+
+test('classifies the foreground app into source / channel / application', () => {
+  assert.equal(classifyForeground('com.webos.app.hdmi2'), 'source');
+  assert.equal(classifyForeground('com.webos.app.externalinput.av1'), 'source');
+  assert.equal(classifyForeground('com.webos.app.livetv'), 'channel');
+  assert.equal(classifyForeground('netflix'), 'application');
+  assert.equal(classifyForeground(''), '');
+  assert.equal(classifyForeground(undefined), '');
+});
+
+test('puts a green dot only on the active row', () => {
+  const items = buildTvStatusItems(
+    {
+      volume: 12,
+      muted: false,
+      source: 'Playstation 5',
+      channel: '1 - TF1',
+      application: 'Netflix',
+    },
+    'source',
+  );
+
+  const byLabel = Object.fromEntries(items.map((item) => [item.label.en, item.color]));
+  assert.equal(byLabel.Source, 'success');
+  assert.equal(byLabel.Channel, undefined);
+  assert.equal(byLabel.App, undefined);
+  assert.equal(byLabel.Volume, undefined);
+});
+
+test('no active row → no green dot anywhere', () => {
+  const items = buildTvStatusItems({ volume: 5, application: 'Netflix' });
+  assert.ok(items.every((item) => item.color === undefined));
 });
