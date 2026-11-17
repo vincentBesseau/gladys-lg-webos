@@ -102,8 +102,9 @@ Notifications appear using the standard webOS toast notification system.
 **Dashboard widget** — a compact **TV remote** widget: the TV name and a status
 block with the real volume, the current source (e.g. HDMI 1), channel and app
 (each row shown only when it has a value — the source appears when there is no
-channel), plus On / Off / a Mute⇄Unmute toggle / Home buttons. Add it from the
-dashboard editor and pick the TV in its settings.
+channel, and a **green dot marks what is on screen right now**), plus On / Off /
+a Mute⇄Unmute toggle / Home buttons. Add it from the dashboard editor and pick
+the TV in its settings.
 
 ---
 

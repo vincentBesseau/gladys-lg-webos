@@ -17,7 +17,7 @@ import {
 } from './src/runtime/televisions.js';
 import { WEBOS_COMMANDS } from './src/webos/commands.js';
 import { WebOsClient } from './src/webos/client.js';
-import { buildTvStatusItems, readTvWidgetState } from './src/widget-tv.js';
+import { buildTvStatusItems, classifyForeground, readTvWidgetState } from './src/widget-tv.js';
 
 const gladys = new GladysIntegration();
 
@@ -810,9 +810,24 @@ gladys.onWidgetGet('tv', async ({ settings }) => {
     logger.warn('Unable to read LG webOS TV state for the widget', error);
   }
 
+  // What is on screen right now (only one of source / channel / application can
+  // be active), read live from the TV to put a green dot on the matching row.
+  let activeRow = '';
+
+  try {
+    const runtime = getRuntimeForDevice({ external_id: deviceExternalId });
+
+    if (runtime.client) {
+      const foreground = await runtime.client.request(WEBOS_COMMANDS.FOREGROUND_APP);
+      activeRow = classifyForeground(foreground.appId || foreground.id);
+    }
+  } catch (error) {
+    logger.debug('Unable to read the LG webOS foreground app for the widget', error);
+  }
+
   const components = [{ type: 'text', variant: 'heading', text: state.tvName }];
 
-  const statusItems = buildTvStatusItems(state);
+  const statusItems = buildTvStatusItems(state, activeRow);
 
   if (statusItems.length) {
     components.push({ type: 'status', items: statusItems });
